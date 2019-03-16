@@ -5,6 +5,7 @@ authors = ["Aaron Ash <aaron.ash@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+# skim = "0.5.5" # can we use this as a fuzzy filter lib?
 
 [dependencies.gtk]
 version = "0.6.0"
