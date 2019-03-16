@@ -3,7 +3,7 @@ extern crate gtk;
 use gtk::prelude::*;
 
 
-use gtk::{Button, TextView, Window, WindowType};
+use gtk::{Button, Entry, TextView, Window, WindowType};
 use std::process::{Command, Stdio};
 use std::io::{self, Write};
 
@@ -19,7 +19,9 @@ fn main() {
     let window = Window::new(WindowType::Popup);
     window.set_title("riiry launcher");
     window.set_default_size(350, 70);
-    let button = Button::new_with_label("Fuzzy Click me!");
+    let button = Button::new_with_label("xdg-open!");
+
+    let entry = Entry::new();
 
     let textview = TextView::new();
     //textview.set_cursor_visible(false);
@@ -29,6 +31,7 @@ fn main() {
 
     // Pack widgets vertically.
     let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    vbox.pack_start(&entry, false, false, 0);
     vbox.pack_start(&button, false, false, 0);
     vbox.pack_start(&scrolledtextview, true, true, 0);
     window.add(&vbox);
@@ -41,7 +44,7 @@ fn main() {
     });
 
     button.connect_clicked(|_| {
-        println!("Clicked!");
+        println!("TODO: Actually launch with xdg-open lolo");
     });
 
     let cmd = Command::new("fd")
