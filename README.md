@@ -51,4 +51,4 @@ Should be possible but not tested yet.
 
 gtk-rs supports windows: http://gtk-rs.org/docs/requirements.html#windows
 
-fd supports windows: http://gtk-rs.org/docs/requirements.html#windows
+fd supports windows: https://github.com/sharkdp/fd#on-windows
