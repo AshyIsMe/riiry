@@ -21,11 +21,21 @@ fn get_files() -> String {
     return files;
 }
 
+//TODO use Skim or some other fuzzy find lib
 fn filter_lines(query: &str, strlines: &str) -> String {
-    let results = String::from("foo\nbar\nbaz");
-    // AA TODO - actually filter here
-    println!("We should really actually query for: {}, in {}", query, strlines);
-    return results;
+    if query.len() == 0 {
+        return String::from(strlines);
+    }
+    let q = String::from(query);
+
+    let mut results: Vec<&str> = Vec::new();
+    let v: Vec<&str> = strlines.split("\n").collect();
+    for s in &v {
+        if s.to_lowercase().contains(&q.to_lowercase()) {
+            results.push(s);
+        }
+    }
+    return results.join("\n");
 }
 
 fn main() {
@@ -70,16 +80,25 @@ fn main() {
         Inhibit(false)
     });
 
+    //TODO Delete the button entirely
     button.connect_clicked(|_| {
         println!("TODO: Actually launch with xdg-open lolo");
     });
 
-    //entry.connect_activate(move |e| {
+    entry.connect_activate(move |e| {
+        println!("TODO: Actually launch with xdg-open lolo");
+    });
+
     entry.connect_changed(move |e| {
         let buffer = e.get_buffer();
         let query = buffer.get_text();
         let results = filter_lines(&query, &full_files_list.clone());
         println!("{}", results);
+
+        //update the main list
+        let buffer = text_view.get_buffer().unwrap();
+        buffer.set_text("");
+        buffer.insert_at_cursor(&results);
     });
 
     gtk::main();
