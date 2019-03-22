@@ -2,15 +2,13 @@ extern crate gtk;
 
 use gtk::prelude::*;
 
-
 use gtk::{Entry, TextView, Window, WindowType};
-use std::process::{Command};
+use std::process::Command;
 
 use sublime_fuzzy::best_match;
 
 // TODO: Actually work through this tutorial:
 // https://mmstick.github.io/gtkrs-tutorials/introduction.html
-
 
 fn get_files() -> String {
     let cmd = Command::new("fd")
@@ -29,18 +27,20 @@ fn filter_lines(query: &str, strlines: &str) -> String {
     }
 
     let v: Vec<&str> = strlines.split("\n").collect();
-    let mut results: Vec<(isize, &str)> = v.into_iter()
-        .map(|s|
-             match best_match(query, s) {
-                 Some(m) => (m.score(), s),
-                 None => (0, s),
-             }
-         ).collect();
+    let mut results: Vec<(isize, &str)> = v
+        .into_iter()
+        .map(|s| match best_match(query, s) {
+            Some(m) => (m.score(), s),
+            None => (0, s),
+        })
+        .collect();
     results.sort();
 
-    let sortedmatches: Vec<&str> = results.into_iter()
+    let sortedmatches: Vec<&str> = results
+        .into_iter()
         .filter(|t| t.0 > 0)
-        .map(|t| t.1).collect();
+        .map(|t| t.1)
+        .collect();
 
     return sortedmatches.join("\n");
 }
@@ -89,7 +89,9 @@ fn main() {
         let text_view = text_view.clone();
         entry.connect_activate(move |_| {
             let buffer = text_view.get_buffer().unwrap();
-            let line = buffer.get_text(&buffer.get_start_iter(),&buffer.get_iter_at_line(1), false).unwrap();
+            let line = buffer
+                .get_text(&buffer.get_start_iter(), &buffer.get_iter_at_line(1), false)
+                .unwrap();
             println!("Launching: xdg-open {}", line);
             Command::new("xdg-open")
                 .arg(&line)
