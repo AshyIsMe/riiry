@@ -3,10 +3,13 @@ extern crate gtk;
 use gtk::prelude::*;
 
 
-use gtk::{Button, Entry, TextView, Window, WindowType};
+use gtk::{Entry, TextView, Window, WindowType};
 use std::process::{Command};
 
 use sublime_fuzzy::best_match;
+
+// TODO: Actually work through this tutorial:
+// https://mmstick.github.io/gtkrs-tutorials/introduction.html
 
 
 fn get_files() -> String {
@@ -56,7 +59,6 @@ fn main() {
     let window = Window::new(WindowType::Popup);
     window.set_title("riiry launcher");
     window.set_default_size(350, 70);
-    let button = Button::new_with_label("xdg-open!");
 
     let entry = Entry::new();
 
@@ -73,7 +75,6 @@ fn main() {
     // Pack widgets vertically.
     let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
     vbox.pack_start(&entry, false, false, 0);
-    vbox.pack_start(&button, false, false, 0);
     vbox.pack_start(&scrolled_text_view, true, true, 0);
     window.add(&vbox);
 
@@ -84,14 +85,20 @@ fn main() {
         Inhibit(false)
     });
 
-    //TODO Delete the button entirely
-    button.connect_clicked(|_| {
-        println!("TODO: Actually launch with xdg-open lolo");
-    });
+    {
+        let text_view = text_view.clone();
+        entry.connect_activate(move |_| {
+            let buffer = text_view.get_buffer().unwrap();
+            let line = buffer.get_text(&buffer.get_start_iter(),&buffer.get_iter_at_line(1), false).unwrap();
+            println!("Launching: xdg-open {}", line);
+            Command::new("xdg-open")
+                .arg(&line)
+                .output()
+                .expect("Failed to run xdg-open");
 
-    entry.connect_activate(move |_| {
-        println!("TODO: Actually launch with xdg-open lolo");
-    });
+            gtk::main_quit();
+        });
+    }
 
     entry.connect_changed(move |e| {
         let buffer = e.get_buffer();
