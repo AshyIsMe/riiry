@@ -5,6 +5,7 @@ authors = ["Aaron Ash <aaron.ash@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+failure = "0.1"
 sublime_fuzzy = "0.6.0"
 
 [dependencies.gtk]

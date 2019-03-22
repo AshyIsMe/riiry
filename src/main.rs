@@ -1,23 +1,23 @@
-extern crate gtk;
-
-use gtk::prelude::*;
-
-use gtk::{Entry, TextView, Window, WindowType};
 use std::process::Command;
 
+use failure::err_msg;
+use failure::Error;
+use failure::ResultExt;
+use gtk::prelude::*;
+use gtk::{Entry, TextView, Window, WindowType};
 use sublime_fuzzy::best_match;
 
 // TODO: Actually work through this tutorial:
 // https://mmstick.github.io/gtkrs-tutorials/introduction.html
 
-fn get_files() -> String {
+fn get_files() -> Result<String, Error> {
     let cmd = Command::new("fd")
         .arg("-pa")
         .arg(".")
         .output()
-        .expect("Failed to run fd");
+        .with_context(|_| err_msg("executing fd"))?;
 
-    String::from_utf8(cmd.stdout).unwrap()
+    Ok(String::from_utf8(cmd.stdout).with_context(|_| err_msg("decoding fd output"))?)
 }
 
 fn filter_lines(query: &str, strlines: &str) -> String {
@@ -44,15 +44,12 @@ fn filter_lines(query: &str, strlines: &str) -> String {
     sorted_matches.join("\n")
 }
 
-fn main() {
+fn main() -> Result<(), Error> {
     println!("Hello, world!");
 
-    if gtk::init().is_err() {
-        println!("Failed to initialize GTK.");
-        return;
-    }
+    gtk::init().with_context(|_| err_msg("failed to initialise gtk"))?;
 
-    let full_files_list = get_files();
+    let full_files_list = get_files()?;
 
     //let window = Window::new(WindowType::Toplevel);
     let window = Window::new(WindowType::Popup);
@@ -68,7 +65,9 @@ fn main() {
     scrolled_text_view.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
     scrolled_text_view.add(&text_view);
 
-    let buffer = text_view.get_buffer().unwrap();
+    let buffer = text_view
+        .get_buffer()
+        .ok_or_else(|| err_msg("text view buffer missing"))?;
     buffer.insert_at_cursor(&full_files_list);
 
     // Pack widgets vertically.
@@ -104,7 +103,7 @@ fn main() {
     entry.connect_changed(move |e| {
         let buffer = e.get_buffer();
         let query = buffer.get_text();
-        let results = filter_lines(&query, &full_files_list.clone());
+        let results = filter_lines(&query, &full_files_list);
         println!("{}", results);
 
         //update the main list
@@ -114,4 +113,6 @@ fn main() {
     });
 
     gtk::main();
+
+    Ok(())
 }
