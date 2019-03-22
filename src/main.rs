@@ -17,16 +17,15 @@ fn get_files() -> String {
         .output()
         .expect("Failed to run fd");
 
-    let files = String::from_utf8(cmd.stdout).unwrap();
-    return files;
+    String::from_utf8(cmd.stdout).unwrap()
 }
 
 fn filter_lines(query: &str, strlines: &str) -> String {
-    if query.len() == 0 {
+    if query.is_empty() {
         return String::from(strlines);
     }
 
-    let v: Vec<&str> = strlines.split("\n").collect();
+    let v: Vec<&str> = strlines.split('\n').collect();
     let mut results: Vec<(isize, &str)> = v
         .into_iter()
         .map(|s| match best_match(query, s) {
@@ -36,13 +35,13 @@ fn filter_lines(query: &str, strlines: &str) -> String {
         .collect();
     results.sort();
 
-    let sortedmatches: Vec<&str> = results
+    let sorted_matches: Vec<&str> = results
         .into_iter()
         .filter(|t| t.0 > 0)
         .map(|t| t.1)
         .collect();
 
-    return sortedmatches.join("\n");
+    sorted_matches.join("\n")
 }
 
 fn main() {
