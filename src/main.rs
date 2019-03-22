@@ -5,7 +5,9 @@ use gtk::prelude::*;
 
 use gtk::{Button, Entry, TextView, Window, WindowType};
 use std::process::{Command};
-//use std::io::{self, Write};
+
+use sublime_fuzzy::best_match;
+
 
 fn get_files() -> String {
     let cmd = Command::new("fd")
@@ -14,28 +16,30 @@ fn get_files() -> String {
         .output()
         .expect("Failed to run fd");
 
-    //io::stdout().write_all(&cmd.stdout).unwrap();
-    //io::stderr().write_all(&cmd.stderr).unwrap();
-
     let files = String::from_utf8(cmd.stdout).unwrap();
     return files;
 }
 
-//TODO use Skim or some other fuzzy find lib
 fn filter_lines(query: &str, strlines: &str) -> String {
     if query.len() == 0 {
         return String::from(strlines);
     }
-    let q = String::from(query);
 
-    let mut results: Vec<&str> = Vec::new();
     let v: Vec<&str> = strlines.split("\n").collect();
-    for s in &v {
-        if s.to_lowercase().contains(&q.to_lowercase()) {
-            results.push(s);
-        }
-    }
-    return results.join("\n");
+    let mut results: Vec<(isize, &str)> = v.into_iter()
+        .map(|s|
+             match best_match(query, s) {
+                 Some(m) => (m.score(), s),
+                 None => (0, s),
+             }
+         ).collect();
+    results.sort();
+
+    let sortedmatches: Vec<&str> = results.into_iter()
+        .filter(|t| t.0 > 0)
+        .map(|t| t.1).collect();
+
+    return sortedmatches.join("\n");
 }
 
 fn main() {
@@ -85,7 +89,7 @@ fn main() {
         println!("TODO: Actually launch with xdg-open lolo");
     });
 
-    entry.connect_activate(move |e| {
+    entry.connect_activate(move |_| {
         println!("TODO: Actually launch with xdg-open lolo");
     });
 

@@ -266,7 +266,13 @@ name = "riiry"
 version = "0.1.0"
 dependencies = [
  "gtk 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sublime_fuzzy 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "sublime_fuzzy"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "winapi"
@@ -311,6 +317,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum pango 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4e36b55d7cd522bd183efeb3dfabc547bda1f26eadf8a1241dac09ab3fd3242c"
 "checksum pango-sys 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "747ab9cd4d537e6dc5ef0e4308c10dde8b706673b0237fed4e056b8d2c0b23c8"
 "checksum pkg-config 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)" = "676e8eb2b1b4c9043511a9b7bea0915320d7e502b0a079fb03f9635a5252b18c"
+"checksum sublime_fuzzy 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "bdac3d983d073c19487ba1f5e16eda43e9c6e50aa895d87110d0febe389b66b9"
 "checksum winapi 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)" = "92c1eb33641e276cfa214a0522acad57be5c56b10cb348b3c5117db75f3ac4b0"
 "checksum winapi-i686-pc-windows-gnu 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
 "checksum winapi-x86_64-pc-windows-gnu 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
