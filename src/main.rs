@@ -86,17 +86,16 @@ fn main() -> Result<(), Error> {
     {
         let text_view = text_view.clone();
         entry.connect_activate(move |_| {
-            let buffer = text_view.get_buffer().unwrap();
-            let line = buffer
-                .get_text(&buffer.get_start_iter(), &buffer.get_iter_at_line(1), false)
-                .unwrap();
-            println!("Launching: xdg-open {}", line);
-            Command::new("xdg-open")
-                .arg(&line)
-                .output()
-                .expect("Failed to run xdg-open");
-
-            gtk::main_quit();
+            if let Err(e) = exec_open(&text_view) {
+                gtk::MessageDialog::new(
+                    Some(&window),
+                    gtk::DialogFlags::empty(),
+                    gtk::MessageType::Error,
+                    gtk::ButtonsType::Close,
+                    &format!("oh no! {:?}", e),
+                )
+                .run();
+            }
         });
     }
 
@@ -113,6 +112,25 @@ fn main() -> Result<(), Error> {
     });
 
     gtk::main();
+
+    Ok(())
+}
+
+fn exec_open(text_view: &TextView) -> Result<(), Error> {
+    let buffer = text_view
+        .get_buffer()
+        .ok_or_else(|| err_msg("getting buffer"))?;
+    let line = buffer
+        .get_text(&buffer.get_start_iter(), &buffer.get_iter_at_line(1), false)
+        .ok_or_else(|| err_msg("getting text"))?;
+
+    println!("Launching: xdg-open {}", line);
+    Command::new("xdg-open")
+        .arg(&line)
+        .output()
+        .with_context(|_| err_msg("Failed to run xdg-open"))?;
+
+    gtk::main_quit();
 
     Ok(())
 }
