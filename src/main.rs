@@ -1,59 +1,55 @@
-extern crate gtk;
+use std::process::Command;
 
+use failure::err_msg;
+use failure::Error;
+use failure::ResultExt;
 use gtk::prelude::*;
-
-
 use gtk::{Entry, TextView, Window, WindowType};
-use std::process::{Command};
-
 use sublime_fuzzy::best_match;
 
 // TODO: Actually work through this tutorial:
 // https://mmstick.github.io/gtkrs-tutorials/introduction.html
 
-
-fn get_files() -> String {
+fn get_files() -> Result<String, Error> {
     let cmd = Command::new("fd")
         .arg("-pa")
         .arg(".")
         .output()
-        .expect("Failed to run fd");
+        .with_context(|_| err_msg("executing fd"))?;
 
-    let files = String::from_utf8(cmd.stdout).unwrap();
-    return files;
+    Ok(String::from_utf8(cmd.stdout).with_context(|_| err_msg("decoding fd output"))?)
 }
 
 fn filter_lines(query: &str, strlines: &str) -> String {
-    if query.len() == 0 {
+    if query.is_empty() {
         return String::from(strlines);
     }
 
-    let v: Vec<&str> = strlines.split("\n").collect();
-    let mut results: Vec<(isize, &str)> = v.into_iter()
-        .map(|s|
-             match best_match(query, s) {
-                 Some(m) => (m.score(), s),
-                 None => (0, s),
-             }
-         ).collect();
+    let v: Vec<&str> = strlines.split('\n').collect();
+    let mut results: Vec<(isize, &str)> = v
+        .into_iter()
+        .map(|s| match best_match(query, s) {
+            Some(m) => (m.score(), s),
+            None => (0, s),
+        })
+        .collect();
     results.sort();
 
-    let sortedmatches: Vec<&str> = results.into_iter()
+    let sorted_matches: Vec<&str> = results
+        .into_iter()
         .filter(|t| t.0 > 0)
-        .map(|t| t.1).collect();
+        .map(|t| t.1)
+        .collect();
 
-    return sortedmatches.join("\n");
+    sorted_matches.join("\n")
 }
 
-fn main() {
+fn main() -> Result<(), Error> {
     println!("Hello, world!");
 
-    if gtk::init().is_err() {
-        println!("Failed to initialize GTK.");
-        return;
-    }
+    gtk::init().with_context(|_| err_msg("failed to initialise gtk"))?;
 
-    let full_files_list = get_files();
+    let full_files_list = get_files()?;
 
     //let window = Window::new(WindowType::Toplevel);
     let window = Window::new(WindowType::Popup);
@@ -69,7 +65,9 @@ fn main() {
     scrolled_text_view.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
     scrolled_text_view.add(&text_view);
 
-    let buffer = text_view.get_buffer().unwrap();
+    let buffer = text_view
+        .get_buffer()
+        .ok_or_else(|| err_msg("text view buffer missing"))?;
     buffer.insert_at_cursor(&full_files_list);
 
     // Pack widgets vertically.
@@ -88,22 +86,23 @@ fn main() {
     {
         let text_view = text_view.clone();
         entry.connect_activate(move |_| {
-            let buffer = text_view.get_buffer().unwrap();
-            let line = buffer.get_text(&buffer.get_start_iter(),&buffer.get_iter_at_line(1), false).unwrap();
-            println!("Launching: xdg-open {}", line);
-            Command::new("xdg-open")
-                .arg(&line)
-                .output()
-                .expect("Failed to run xdg-open");
-
-            gtk::main_quit();
+            if let Err(e) = exec_open(&text_view) {
+                gtk::MessageDialog::new(
+                    Some(&window),
+                    gtk::DialogFlags::empty(),
+                    gtk::MessageType::Error,
+                    gtk::ButtonsType::Close,
+                    &format!("oh no! {:?}", e),
+                )
+                .run();
+            }
         });
     }
 
     entry.connect_changed(move |e| {
         let buffer = e.get_buffer();
         let query = buffer.get_text();
-        let results = filter_lines(&query, &full_files_list.clone());
+        let results = filter_lines(&query, &full_files_list);
         println!("{}", results);
 
         //update the main list
@@ -113,4 +112,25 @@ fn main() {
     });
 
     gtk::main();
+
+    Ok(())
+}
+
+fn exec_open(text_view: &TextView) -> Result<(), Error> {
+    let buffer = text_view
+        .get_buffer()
+        .ok_or_else(|| err_msg("getting buffer"))?;
+    let line = buffer
+        .get_text(&buffer.get_start_iter(), &buffer.get_iter_at_line(1), false)
+        .ok_or_else(|| err_msg("getting text"))?;
+
+    println!("Launching: xdg-open {}", line);
+    Command::new("xdg-open")
+        .arg(&line)
+        .output()
+        .with_context(|_| err_msg("Failed to run xdg-open"))?;
+
+    gtk::main_quit();
+
+    Ok(())
 }
