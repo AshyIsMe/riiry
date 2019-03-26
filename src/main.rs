@@ -3,13 +3,16 @@ use std::process::Command;
 use failure::err_msg;
 use failure::Error;
 use failure::ResultExt;
+use glib::{get_system_data_dirs, get_user_data_dir};
 use gtk::prelude::*;
 use gtk::{Entry, TextView, Window, WindowType};
 use sublime_fuzzy::best_match;
+use walkdir::{DirEntry, WalkDir};
 
 // TODO: Actually work through this tutorial:
 // https://mmstick.github.io/gtkrs-tutorials/introduction.html
 
+// TODO: Use walkdir instead of fd
 fn get_files() -> Result<String, Error> {
     let cmd = Command::new("fd")
         .arg("-pa")
@@ -20,6 +23,47 @@ fn get_files() -> Result<String, Error> {
     Ok(String::from_utf8(cmd.stdout).with_context(|_| err_msg("decoding fd output"))?)
 }
 
+fn is_hidden(entry: &DirEntry) -> bool {
+    entry
+        .file_name()
+        .to_str()
+        .map(|s| s.starts_with("."))
+        .unwrap_or(false)
+}
+
+fn is_desktop(entry: &DirEntry) -> bool {
+    entry
+        .file_name()
+        .to_str()
+        .map(|s| s.ends_with(".desktop"))
+        .unwrap_or(false)
+}
+
+
+fn get_apps() -> Result<String, Error> {
+    let mut dirs = get_system_data_dirs();
+    match get_user_data_dir() {
+        Some(ud) => dirs.push(ud),
+        None => println!("get_user_data_dir() empty"),
+    }
+    println!("dirs: {:?}", dirs);
+
+    let mut results = String::new();
+    for dir in dirs {
+        for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
+            if is_desktop(&entry) {
+                println!("{}", entry.path().display());
+                results.push_str(entry.path().to_str().unwrap());
+                results.push_str("\n");
+            }
+        }
+    }
+
+    //Err(err_msg("TODO"))
+    Ok(results)
+}
+
+// This is stupid slow...
 fn filter_lines(query: &str, strlines: &str) -> String {
     if query.is_empty() {
         return String::from(strlines);
@@ -50,6 +94,10 @@ fn main() -> Result<(), Error> {
     gtk::init().with_context(|_| err_msg("failed to initialise gtk"))?;
 
     let full_files_list = get_files()?;
+    let full_apps_list = get_apps()?;
+
+    //let haystack = full_files_list;
+    let haystack = full_apps_list;
 
     //let window = Window::new(WindowType::Toplevel);
     let window = Window::new(WindowType::Popup);
@@ -68,7 +116,7 @@ fn main() -> Result<(), Error> {
     let buffer = text_view
         .get_buffer()
         .ok_or_else(|| err_msg("text view buffer missing"))?;
-    buffer.insert_at_cursor(&full_files_list);
+    buffer.insert_at_cursor(&haystack);
 
     // Pack widgets vertically.
     let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -99,17 +147,20 @@ fn main() -> Result<(), Error> {
         });
     }
 
-    entry.connect_changed(move |e| {
-        let buffer = e.get_buffer();
-        let query = buffer.get_text();
-        let results = filter_lines(&query, &full_files_list);
-        println!("{}", results);
+    {
+        let text_view = text_view.clone();
+        entry.connect_changed(move |e| {
+            let buffer = e.get_buffer();
+            let query = buffer.get_text();
+            let results = filter_lines(&query, &haystack);
+            println!("{}", results);
 
-        //update the main list
-        let buffer = text_view.get_buffer().unwrap();
-        buffer.set_text("");
-        buffer.insert_at_cursor(&results);
-    });
+            //update the main list
+            let buffer = text_view.get_buffer().unwrap();
+            buffer.set_text("");
+            buffer.insert_at_cursor(&results);
+        });
+    }
 
     gtk::main();
 

@@ -7,8 +7,9 @@ edition = "2018"
 [dependencies]
 failure = "0.1"
 sublime_fuzzy = "0.6.0"
+glib = "0.7.0"
+walkdir = "2"
 
 [dependencies.gtk]
 version = "0.6.0"
 features = ["v3_22"]
-

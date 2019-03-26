@@ -9,8 +9,9 @@ pkgs.mkShell {
     glib
     gnome2.pango
 
-    rustc
     cargo
+    rustc
+    rustfmt
     pkgconfig
   ];
 }
