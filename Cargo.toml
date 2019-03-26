@@ -1,8 +1,15 @@
 [package]
 name = "riiry"
 version = "0.1.1"
-authors = ["Aaron Ash <aaron.ash@gmail.com>"]
 edition = "2018"
+authors = ["Aaron Ash <aaron.ash@gmail.com>",
+           "Chris West <github.com/FauxFaux>",
+           "Aida <github.com/Autotonic>"]
+license = "MIT"
+repository = "https://github.com/ashyisme/riiry"
+description = """
+Riiry, a cross platform fuzzy launcher similar to rofi.
+"""
 
 [dependencies]
 failure = "0.1"
