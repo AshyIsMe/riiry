@@ -1,16 +1,25 @@
-use std::process::Command;
 
-use failure::err_msg;
+#[macro_use] extern crate lazy_static;
+extern crate regex;
+
 use failure::Error;
 use failure::ResultExt;
+use failure::err_msg;
 use glib::{get_system_data_dirs, get_user_data_dir};
 use gtk::prelude::*;
 use gtk::{Entry, TextView, Window, WindowType};
+use regex::Regex;
+use std::fs;
+use std::process::Command;
 use sublime_fuzzy::best_match;
 use walkdir::{DirEntry, WalkDir};
 
 // TODO: Actually work through this tutorial:
 // https://mmstick.github.io/gtkrs-tutorials/introduction.html
+
+lazy_static! {
+    static ref RE_TypeApplication: Regex = Regex::new(r"\nType=.*Application.*\n").unwrap();
+}
 
 // TODO: Use walkdir instead of fd
 fn get_files() -> Result<String, Error> {
@@ -39,6 +48,14 @@ fn is_desktop(entry: &DirEntry) -> bool {
         .unwrap_or(false)
 }
 
+fn is_application(entry: &DirEntry) -> bool {
+    let f = fs::read_to_string(entry.path());
+    match f {
+        Err(_) => false,
+        Ok(f) => RE_TypeApplication.is_match(&f),
+    }
+}
+
 
 fn get_apps() -> Result<String, Error> {
     let mut dirs = get_system_data_dirs();
@@ -51,7 +68,8 @@ fn get_apps() -> Result<String, Error> {
     let mut results = String::new();
     for dir in dirs {
         for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
-            if is_desktop(&entry) {
+            //if !is_hidden(&entry) && is_desktop(&entry) && is_application(&entry) {
+            if is_desktop(&entry) && is_application(&entry) {
                 println!("{}", entry.path().display());
                 results.push_str(entry.path().to_str().unwrap());
                 results.push_str("\n");
@@ -59,7 +77,6 @@ fn get_apps() -> Result<String, Error> {
         }
     }
 
-    //Err(err_msg("TODO"))
     Ok(results)
 }
 
@@ -99,8 +116,10 @@ fn main() -> Result<(), Error> {
     //let haystack = full_files_list;
     let haystack = full_apps_list;
 
-    //let window = Window::new(WindowType::Toplevel);
-    let window = Window::new(WindowType::Popup);
+    // Popup is not what we want (broken af on i3wm).  Toplevel is a "normal" window, also not what
+    // we want.  Maybe needs to be Dialog?
+    //let window = Window::new(WindowType::Popup);
+    let window = Window::new(WindowType::Toplevel);
     window.set_title("riiry launcher");
     window.set_default_size(350, 70);
 
