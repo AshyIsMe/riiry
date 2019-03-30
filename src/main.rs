@@ -1,16 +1,16 @@
-
-#[macro_use] extern crate lazy_static;
+#[macro_use]
+extern crate lazy_static;
 extern crate regex;
 
+use failure::err_msg;
 use failure::Error;
 use failure::ResultExt;
-use failure::err_msg;
 use glib::{get_system_data_dirs, get_user_data_dir};
 use gtk::prelude::*;
 use gtk::{Entry, TextView, Window, WindowType};
 use regex::Regex;
 use std::fs;
-use std::path::{Path};
+use std::path::Path;
 use std::process::Command;
 use sublime_fuzzy::best_match;
 use walkdir::{DirEntry, WalkDir};
@@ -58,7 +58,6 @@ fn is_application(entry: &DirEntry) -> bool {
     }
 }
 
-
 fn get_apps() -> Result<String, Error> {
     let mut dirs = get_system_data_dirs();
     match get_user_data_dir() {
@@ -69,13 +68,14 @@ fn get_apps() -> Result<String, Error> {
 
     let mut results = String::new();
     for dir in dirs {
-        for entry in WalkDir::new(dir).into_iter().filter_map(|e| e.ok()) {
-            //if !is_hidden(&entry) && is_desktop(&entry) && is_application(&entry) {
-            if is_desktop(&entry) && is_application(&entry) {
-                println!("{}", entry.path().display());
-                results.push_str(entry.path().to_str().unwrap());
-                results.push_str("\n");
-            }
+        for entry in WalkDir::new(dir)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| is_desktop(e) && is_application(e))
+        {
+            println!("{}", entry.path().display());
+            results.push_str(entry.path().to_str().unwrap());
+            results.push_str("\n");
         }
     }
 
@@ -200,10 +200,11 @@ fn launch_application(path: &Path) -> Result<(), Error> {
     // We are literally execing whatever is in the desktop file...
     println!("Executing: {}", line);
     Command::new("sh")
-            .arg("-c")
-            .arg(&line)
-            .spawn().expect("Failed to launch process.");
-            //.with_context(|_| err_msg("Failed to launch process"))?;
+        .arg("-c")
+        .arg(&line)
+        .spawn()
+        .expect("Failed to launch process.");
+    //.with_context(|_| err_msg("Failed to launch process"))?;
 
     Ok(())
 }
