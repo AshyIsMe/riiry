@@ -97,6 +97,7 @@ fn filter_lines(query: &str, strlines: &str) -> String {
         })
         .collect();
     results.sort();
+    results.reverse();
 
     let sorted_matches: Vec<&str> = results
         .into_iter()
@@ -153,6 +154,8 @@ fn main() -> Result<(), Error> {
     });
 
     {
+        //TODO: Quit on Esc key
+
         let text_view = text_view.clone();
         entry.connect_activate(move |_| {
             if let Err(e) = exec_open(&text_view) {
@@ -214,7 +217,7 @@ fn exec_open(text_view: &TextView) -> Result<(), Error> {
         .ok_or_else(|| err_msg("getting text"))?;
 
     println!("Launching: {}", line);
-    launch_application(&Path::new(&line)).is_ok();
+    launch_application(&Path::new(&line.trim())).is_ok();
 
     gtk::main_quit();
 
