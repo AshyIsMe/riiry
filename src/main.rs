@@ -18,6 +18,11 @@ use walkdir::{DirEntry, WalkDir};
 
 // TODO: Actually work through this tutorial:
 // https://mmstick.github.io/gtkrs-tutorials/introduction.html
+//
+// TODO:
+// - use log and hide debug output in release builds: https://doc.rust-lang.org/1.1.0/log/
+// - better xdg support: https://crates.io/crates/xdg
+// - Windows + OSX: https://crates.io/crates/directories
 
 lazy_static! {
     static ref RE_TypeApplication: Regex = Regex::new(r"\nType=.*Application.*\n").unwrap();
@@ -83,7 +88,6 @@ fn get_apps() -> Result<String, Error> {
     Ok(results)
 }
 
-// This is stupid slow...
 fn filter_lines(query: &str, strlines: &str) -> String {
     if query.is_empty() {
         return String::from(strlines);
@@ -110,8 +114,6 @@ fn filter_lines(query: &str, strlines: &str) -> String {
 }
 
 fn main() -> Result<(), Error> {
-    println!("Hello, world!");
-
     gtk::init().with_context(|_| err_msg("failed to initialise gtk"))?;
 
     let full_files_list = get_files()?;
