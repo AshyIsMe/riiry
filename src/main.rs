@@ -10,6 +10,7 @@ use gtk::prelude::*;
 use gtk::{Entry, TextView, Window, WindowType};
 use regex::Regex;
 use std::fs;
+use std::path::{Path};
 use std::process::Command;
 use sublime_fuzzy::best_match;
 use walkdir::{DirEntry, WalkDir};
@@ -19,6 +20,7 @@ use walkdir::{DirEntry, WalkDir};
 
 lazy_static! {
     static ref RE_TypeApplication: Regex = Regex::new(r"\nType=.*Application.*\n").unwrap();
+    static ref RE_ExecCommand: Regex = Regex::new(r"\nExec=(.*)\n").unwrap();
 }
 
 // TODO: Use walkdir instead of fd
@@ -186,6 +188,23 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
+fn launch_application(path: &Path) -> Result<(), Error> {
+    let f = fs::read_to_string(path).unwrap();
+    let cap = RE_ExecCommand.captures(&f).unwrap();
+    let line = &cap[1];
+
+    // WARNING: Here be demons!
+    // We are literally execing whatever is in the desktop file...
+    println!("Executing: {}", line);
+    Command::new("sh")
+            .arg("-c")
+            .arg(&line)
+            .spawn().expect("Failed to launch process.");
+            //.with_context(|_| err_msg("Failed to launch process"))?;
+
+    Ok(())
+}
+
 fn exec_open(text_view: &TextView) -> Result<(), Error> {
     let buffer = text_view
         .get_buffer()
@@ -194,11 +213,8 @@ fn exec_open(text_view: &TextView) -> Result<(), Error> {
         .get_text(&buffer.get_start_iter(), &buffer.get_iter_at_line(1), false)
         .ok_or_else(|| err_msg("getting text"))?;
 
-    println!("Launching: xdg-open {}", line);
-    Command::new("xdg-open")
-        .arg(&line)
-        .output()
-        .with_context(|_| err_msg("Failed to run xdg-open"))?;
+    println!("Launching: {}", line);
+    launch_application(&Path::new(&line)).is_ok();
 
     gtk::main_quit();
 
