@@ -13,6 +13,7 @@ Riiry, a cross platform fuzzy launcher similar to rofi.
 
 [dependencies]
 failure = "0.1"
+gdk = "0.10.0"
 glib = "0.7.0"
 regex = "1"
 sublime_fuzzy = "0.6.0"

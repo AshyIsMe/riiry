@@ -8,6 +8,7 @@ use failure::ResultExt;
 use glib::{get_system_data_dirs, get_user_data_dir};
 use gtk::prelude::*;
 use gtk::{Entry, TextView, Window, WindowType};
+use gdk::enums::key;
 use regex::Regex;
 use std::fs;
 use std::path::Path;
@@ -153,9 +154,15 @@ fn main() -> Result<(), Error> {
         Inhibit(false)
     });
 
-    {
-        //TODO: Quit on Esc key
+    window.connect_key_press_event(|window, gdk| {
+        match gdk.get_keyval() {
+            key::Escape => gtk::main_quit(),
+            _ => (),
+        }
+        Inhibit(false)
+    });
 
+    {
         let text_view = text_view.clone();
         entry.connect_activate(move |_| {
             if let Err(e) = exec_open(&text_view) {
