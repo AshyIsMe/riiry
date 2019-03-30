@@ -366,7 +366,7 @@ dependencies = [
 
 [[package]]
 name = "riiry"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "glib 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
