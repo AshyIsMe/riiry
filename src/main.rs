@@ -2,13 +2,15 @@
 extern crate lazy_static;
 extern crate regex;
 
-use failure::err_msg;
 use failure::Error;
 use failure::ResultExt;
+use failure::err_msg;
+use gdk::enums::key;
 use glib::{get_system_data_dirs, get_user_data_dir};
 use gtk::prelude::*;
 use gtk::{Entry, TextView, Window, WindowType};
-use gdk::enums::key;
+use log::{debug, error, info, warn};
+use simple_logger;
 use regex::Regex;
 use std::fs;
 use std::path::Path;
@@ -20,7 +22,6 @@ use walkdir::{DirEntry, WalkDir};
 // https://mmstick.github.io/gtkrs-tutorials/introduction.html
 //
 // TODO:
-// - use log and hide debug output in release builds: https://doc.rust-lang.org/1.1.0/log/
 // - better xdg support: https://crates.io/crates/xdg
 // - Windows + OSX: https://crates.io/crates/directories
 
@@ -68,9 +69,9 @@ fn get_apps() -> Result<String, Error> {
     let mut dirs = get_system_data_dirs();
     match get_user_data_dir() {
         Some(ud) => dirs.push(ud),
-        None => println!("get_user_data_dir() empty"),
+        None => info!("get_user_data_dir() empty"),
     }
-    println!("dirs: {:?}", dirs);
+    debug!("dirs: {:?}", dirs);
 
     let mut results = String::new();
     for dir in dirs {
@@ -79,7 +80,7 @@ fn get_apps() -> Result<String, Error> {
             .filter_map(|e| e.ok())
             .filter(|e| is_desktop(e) && is_application(e))
         {
-            println!("{}", entry.path().display());
+            debug!("{}", entry.path().display());
             results.push_str(entry.path().to_str().unwrap());
             results.push_str("\n");
         }
@@ -114,6 +115,8 @@ fn filter_lines(query: &str, strlines: &str) -> String {
 }
 
 fn main() -> Result<(), Error> {
+    simple_logger::init().unwrap();
+
     gtk::init().with_context(|_| err_msg("failed to initialise gtk"))?;
 
     let full_files_list = get_files()?;
@@ -186,7 +189,7 @@ fn main() -> Result<(), Error> {
             let buffer = e.get_buffer();
             let query = buffer.get_text();
             let results = filter_lines(&query, &haystack);
-            println!("{}", results);
+            debug!("{}", results);
 
             //update the main list
             let buffer = text_view.get_buffer().unwrap();
@@ -207,7 +210,7 @@ fn launch_application(path: &Path) -> Result<(), Error> {
 
     // WARNING: Here be demons!
     // We are literally execing whatever is in the desktop file...
-    println!("Executing: {}", line);
+    debug!("Executing: {}", line);
     Command::new("sh")
         .arg("-c")
         .arg(&line)
@@ -226,7 +229,7 @@ fn exec_open(text_view: &TextView) -> Result<(), Error> {
         .get_text(&buffer.get_start_iter(), &buffer.get_iter_at_line(1), false)
         .ok_or_else(|| err_msg("getting text"))?;
 
-    println!("Launching: {}", line);
+    debug!("Launching: {}", line);
     launch_application(&Path::new(&line.trim())).is_ok();
 
     gtk::main_quit();
