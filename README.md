@@ -35,9 +35,7 @@ cargo run
 
 ### Other linux distros
 
-Just use nix (untested lol...)
-
-https://nixos.org/nix/download.html
+Ubuntu: `apt install libgtk-3-dev`
 
 ### OSX
 
