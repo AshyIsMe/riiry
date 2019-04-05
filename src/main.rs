@@ -97,6 +97,8 @@ fn get_apps() -> Result<String, Error> {
     Ok(results)
 }
 
+// TODO: Hilariously slow when there is a large haystack.
+// get_home_files() can't be used until filter_lines() is faster...
 fn filter_lines(query: &str, strlines: &str) -> String {
     if query.is_empty() {
         return String::from(strlines);
@@ -127,11 +129,12 @@ fn main() -> Result<(), Error> {
 
     gtk::init().with_context(|_| err_msg("failed to initialise gtk"))?;
 
-    let full_files_list = get_home_files()?;
+    //let full_files_list = get_home_files()?;
     let full_apps_list = get_apps()?;
 
-    //let haystack = full_files_list;
-    let haystack = full_apps_list + &full_files_list;
+    // TODO: Add file launching back in.
+    //let haystack = full_apps_list + &full_files_list;
+    let haystack = full_apps_list;
 
     // Popup is not what we want (broken af on i3wm).  Toplevel is a "normal" window, also not what
     // we want.  Maybe needs to be Dialog?
