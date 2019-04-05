@@ -10,8 +10,9 @@ use glib::{get_system_data_dirs, get_user_data_dir};
 use gtk::prelude::*;
 use gtk::{Entry, TextView, Window, WindowType};
 use log::{debug, error, info, warn};
-use simple_logger;
 use regex::Regex;
+use simple_logger;
+use std::env;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -22,6 +23,7 @@ use walkdir::{DirEntry, WalkDir};
 // https://mmstick.github.io/gtkrs-tutorials/introduction.html
 //
 // TODO:
+// - A real data structure
 // - better xdg support: https://crates.io/crates/xdg
 // - Windows + OSX: https://crates.io/crates/directories
 
@@ -30,15 +32,21 @@ lazy_static! {
     static ref RE_ExecCommand: Regex = Regex::new(r"\nExec=(.*)\n").unwrap();
 }
 
-// TODO: Use walkdir instead of fd
-fn get_files() -> Result<String, Error> {
-    let cmd = Command::new("fd")
-        .arg("-pa")
-        .arg(".")
-        .output()
-        .with_context(|_| err_msg("executing fd"))?;
+fn get_home_files() -> Result<String, Error> {
+    let mut results = String::new();
+    let dir = env::var("HOME")?;
+    for entry in WalkDir::new(dir)
+        .into_iter()
+        .filter_entry(|e| !is_hidden(e)) {
 
-    Ok(String::from_utf8(cmd.stdout).with_context(|_| err_msg("decoding fd output"))?)
+        if let Ok(e) = entry {
+            debug!("{}", e.path().display());
+            results.push_str(e.path().to_str().unwrap());
+            results.push_str("\n");
+        }
+    }
+
+    Ok(results)
 }
 
 fn is_hidden(entry: &DirEntry) -> bool {
@@ -57,7 +65,7 @@ fn is_desktop(entry: &DirEntry) -> bool {
         .unwrap_or(false)
 }
 
-fn is_application(entry: &DirEntry) -> bool {
+fn is_xdg_application(entry: &DirEntry) -> bool {
     let f = fs::read_to_string(entry.path());
     match f {
         Err(_) => false,
@@ -78,7 +86,7 @@ fn get_apps() -> Result<String, Error> {
         for entry in WalkDir::new(dir)
             .into_iter()
             .filter_map(|e| e.ok())
-            .filter(|e| is_desktop(e) && is_application(e))
+            .filter(|e| is_desktop(e) && is_xdg_application(e))
         {
             debug!("{}", entry.path().display());
             results.push_str(entry.path().to_str().unwrap());
@@ -119,11 +127,11 @@ fn main() -> Result<(), Error> {
 
     gtk::init().with_context(|_| err_msg("failed to initialise gtk"))?;
 
-    let full_files_list = get_files()?;
+    let full_files_list = get_home_files()?;
     let full_apps_list = get_apps()?;
 
     //let haystack = full_files_list;
-    let haystack = full_apps_list;
+    let haystack = full_apps_list + &full_files_list;
 
     // Popup is not what we want (broken af on i3wm).  Toplevel is a "normal" window, also not what
     // we want.  Maybe needs to be Dialog?
@@ -221,6 +229,16 @@ fn launch_application(path: &Path) -> Result<(), Error> {
     Ok(())
 }
 
+fn open_file_in_default_app(path: &Path) -> Result<(), Error> {
+    println!("Launching: xdg-open {:?}", path);
+    Command::new("xdg-open")
+        .arg(&path.as_os_str())
+        .output()
+        .with_context(|_| err_msg("Failed to run xdg-open"))?;
+
+    Ok(())
+}
+
 fn exec_open(text_view: &TextView) -> Result<(), Error> {
     let buffer = text_view
         .get_buffer()
@@ -230,7 +248,11 @@ fn exec_open(text_view: &TextView) -> Result<(), Error> {
         .ok_or_else(|| err_msg("getting text"))?;
 
     debug!("Launching: {}", line);
-    launch_application(&Path::new(&line.trim())).is_ok();
+    if line.trim().ends_with(".desktop") {
+        launch_application(&Path::new(&line.trim())).is_ok();
+    } else {
+        open_file_in_default_app(&Path::new(&line.trim())).is_ok();
+    }
 
     gtk::main_quit();
 
