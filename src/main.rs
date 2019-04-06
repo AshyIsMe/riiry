@@ -9,15 +9,16 @@ use gdk::enums::key;
 use glib::{get_system_data_dirs, get_user_data_dir};
 use gtk::prelude::*;
 use gtk::{Entry, TextView, Window, WindowType};
-use log::{debug, error, info, warn};
+use log::{debug, info};
 use regex::Regex;
 use simple_logger;
 use std::env;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
-use sublime_fuzzy::best_match;
 use walkdir::{DirEntry, WalkDir};
+
+mod filter;
 
 // TODO: Actually work through this tutorial:
 // https://mmstick.github.io/gtkrs-tutorials/introduction.html
@@ -97,44 +98,17 @@ fn get_apps() -> Result<String, Error> {
     Ok(results)
 }
 
-// TODO: Hilariously slow when there is a large haystack.
-// get_home_files() can't be used until filter_lines() is faster...
-fn filter_lines(query: &str, strlines: &str) -> String {
-    if query.is_empty() {
-        return String::from(strlines);
-    }
-
-    let v: Vec<&str> = strlines.split('\n').collect();
-    let mut results: Vec<(isize, &str)> = v
-        .into_iter()
-        .map(|s| match best_match(query, s) {
-            Some(m) => (m.score(), s),
-            None => (0, s),
-        })
-        .collect();
-    results.sort();
-    results.reverse();
-
-    let sorted_matches: Vec<&str> = results
-        .into_iter()
-        .filter(|t| t.0 > 0)
-        .map(|t| t.1)
-        .collect();
-
-    sorted_matches.join("\n")
-}
-
 fn main() -> Result<(), Error> {
     simple_logger::init().unwrap();
 
     gtk::init().with_context(|_| err_msg("failed to initialise gtk"))?;
 
-    //let full_files_list = get_home_files()?;
+    let full_files_list = get_home_files()?;
     let full_apps_list = get_apps()?;
 
     // TODO: Add file launching back in.
-    //let haystack = full_apps_list + &full_files_list;
-    let haystack = full_apps_list;
+    let haystack = full_apps_list + &full_files_list;
+    //let haystack = full_apps_list;
 
     // Popup is not what we want (broken af on i3wm).  Toplevel is a "normal" window, also not what
     // we want.  Maybe needs to be Dialog?
@@ -170,7 +144,7 @@ fn main() -> Result<(), Error> {
         Inhibit(false)
     });
 
-    window.connect_key_press_event(|window, gdk| {
+    window.connect_key_press_event(|_window, gdk| {
         match gdk.get_keyval() {
             key::Escape => gtk::main_quit(),
             _ => (),
@@ -199,7 +173,7 @@ fn main() -> Result<(), Error> {
         entry.connect_changed(move |e| {
             let buffer = e.get_buffer();
             let query = buffer.get_text();
-            let results = filter_lines(&query, &haystack);
+            let results = filter::filter_lines(&query, &haystack);
             debug!("{}", results);
 
             //update the main list
