@@ -97,6 +97,53 @@ fn get_apps() -> Result<String, Error> {
 
     Ok(results)
 }
+fn launch_application(path: &Path) -> Result<(), Error> {
+    let f = fs::read_to_string(path).unwrap();
+    let cap = RE_ExecCommand.captures(&f).unwrap();
+    let line = &cap[1];
+
+    // WARNING: Here be demons!
+    // We are literally execing whatever is in the desktop file...
+    debug!("Executing: {}", line);
+    Command::new("sh")
+        .arg("-c")
+        .arg(&line)
+        .spawn()
+        .expect("Failed to launch process.");
+    //.with_context(|_| err_msg("Failed to launch process"))?;
+
+    Ok(())
+}
+
+fn open_file_in_default_app(path: &Path) -> Result<(), Error> {
+    println!("Launching: xdg-open {:?}", path);
+    Command::new("xdg-open")
+        .arg(&path.as_os_str())
+        .output()
+        .with_context(|_| err_msg("Failed to run xdg-open"))?;
+
+    Ok(())
+}
+
+fn exec_open(text_view: &TextView) -> Result<(), Error> {
+    let buffer = text_view
+        .get_buffer()
+        .ok_or_else(|| err_msg("getting buffer"))?;
+    let line = buffer
+        .get_text(&buffer.get_start_iter(), &buffer.get_iter_at_line(1), false)
+        .ok_or_else(|| err_msg("getting text"))?;
+
+    debug!("Launching: {}", line);
+    if line.trim().ends_with(".desktop") {
+        launch_application(&Path::new(&line.trim())).is_ok();
+    } else {
+        open_file_in_default_app(&Path::new(&line.trim())).is_ok();
+    }
+
+    gtk::main_quit();
+
+    Ok(())
+}
 
 fn main() -> Result<(), Error> {
     simple_logger::init().unwrap();
@@ -184,54 +231,6 @@ fn main() -> Result<(), Error> {
     }
 
     gtk::main();
-
-    Ok(())
-}
-
-fn launch_application(path: &Path) -> Result<(), Error> {
-    let f = fs::read_to_string(path).unwrap();
-    let cap = RE_ExecCommand.captures(&f).unwrap();
-    let line = &cap[1];
-
-    // WARNING: Here be demons!
-    // We are literally execing whatever is in the desktop file...
-    debug!("Executing: {}", line);
-    Command::new("sh")
-        .arg("-c")
-        .arg(&line)
-        .spawn()
-        .expect("Failed to launch process.");
-    //.with_context(|_| err_msg("Failed to launch process"))?;
-
-    Ok(())
-}
-
-fn open_file_in_default_app(path: &Path) -> Result<(), Error> {
-    println!("Launching: xdg-open {:?}", path);
-    Command::new("xdg-open")
-        .arg(&path.as_os_str())
-        .output()
-        .with_context(|_| err_msg("Failed to run xdg-open"))?;
-
-    Ok(())
-}
-
-fn exec_open(text_view: &TextView) -> Result<(), Error> {
-    let buffer = text_view
-        .get_buffer()
-        .ok_or_else(|| err_msg("getting buffer"))?;
-    let line = buffer
-        .get_text(&buffer.get_start_iter(), &buffer.get_iter_at_line(1), false)
-        .ok_or_else(|| err_msg("getting text"))?;
-
-    debug!("Launching: {}", line);
-    if line.trim().ends_with(".desktop") {
-        launch_application(&Path::new(&line.trim())).is_ok();
-    } else {
-        open_file_in_default_app(&Path::new(&line.trim())).is_ok();
-    }
-
-    gtk::main_quit();
 
     Ok(())
 }
