@@ -1,6 +1,4 @@
-
 use sublime_fuzzy::best_match;
-
 
 // TODO: Hilariously slow when there is a large haystack.
 // get_home_files() can't be used until filter_lines() is faster...

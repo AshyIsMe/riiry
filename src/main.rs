@@ -1,4 +1,5 @@
 #[macro_use]
+
 extern crate lazy_static;
 extern crate regex;
 
@@ -6,18 +7,14 @@ use failure::Error;
 use failure::ResultExt;
 use failure::err_msg;
 use gdk::enums::key;
-use glib::{get_system_data_dirs, get_user_data_dir};
 use gtk::prelude::*;
 use gtk::{Entry, TextView, Window, WindowType};
-use log::{debug, info};
-use regex::Regex;
+use log::{debug};
 use simple_logger;
-use std::env;
-use std::fs;
 use std::path::Path;
-use std::process::Command;
-use walkdir::{DirEntry, WalkDir};
 
+mod apps;
+mod files;
 mod filter;
 
 // TODO: Actually work through this tutorial:
@@ -28,102 +25,6 @@ mod filter;
 // - better xdg support: https://crates.io/crates/xdg
 // - Windows + OSX: https://crates.io/crates/directories
 
-lazy_static! {
-    static ref RE_TypeApplication: Regex = Regex::new(r"\nType=.*Application.*\n").unwrap();
-    static ref RE_ExecCommand: Regex = Regex::new(r"\nExec=(.*)\n").unwrap();
-}
-
-fn get_home_files() -> Result<String, Error> {
-    let mut results = String::new();
-    let dir = env::var("HOME")?;
-    for entry in WalkDir::new(dir)
-        .into_iter()
-        .filter_entry(|e| !is_hidden(e)) {
-
-        if let Ok(e) = entry {
-            debug!("{}", e.path().display());
-            results.push_str(e.path().to_str().unwrap());
-            results.push_str("\n");
-        }
-    }
-
-    Ok(results)
-}
-
-fn is_hidden(entry: &DirEntry) -> bool {
-    entry
-        .file_name()
-        .to_str()
-        .map(|s| s.starts_with("."))
-        .unwrap_or(false)
-}
-
-fn is_desktop(entry: &DirEntry) -> bool {
-    entry
-        .file_name()
-        .to_str()
-        .map(|s| s.ends_with(".desktop"))
-        .unwrap_or(false)
-}
-
-fn is_xdg_application(entry: &DirEntry) -> bool {
-    let f = fs::read_to_string(entry.path());
-    match f {
-        Err(_) => false,
-        Ok(f) => RE_TypeApplication.is_match(&f),
-    }
-}
-
-fn get_apps() -> Result<String, Error> {
-    let mut dirs = get_system_data_dirs();
-    match get_user_data_dir() {
-        Some(ud) => dirs.push(ud),
-        None => info!("get_user_data_dir() empty"),
-    }
-    debug!("dirs: {:?}", dirs);
-
-    let mut results = String::new();
-    for dir in dirs {
-        for entry in WalkDir::new(dir)
-            .into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| is_desktop(e) && is_xdg_application(e))
-        {
-            debug!("{}", entry.path().display());
-            results.push_str(entry.path().to_str().unwrap());
-            results.push_str("\n");
-        }
-    }
-
-    Ok(results)
-}
-fn launch_application(path: &Path) -> Result<(), Error> {
-    let f = fs::read_to_string(path).unwrap();
-    let cap = RE_ExecCommand.captures(&f).unwrap();
-    let line = &cap[1];
-
-    // WARNING: Here be demons!
-    // We are literally execing whatever is in the desktop file...
-    debug!("Executing: {}", line);
-    Command::new("sh")
-        .arg("-c")
-        .arg(&line)
-        .spawn()
-        .expect("Failed to launch process.");
-    //.with_context(|_| err_msg("Failed to launch process"))?;
-
-    Ok(())
-}
-
-fn open_file_in_default_app(path: &Path) -> Result<(), Error> {
-    println!("Launching: xdg-open {:?}", path);
-    Command::new("xdg-open")
-        .arg(&path.as_os_str())
-        .output()
-        .with_context(|_| err_msg("Failed to run xdg-open"))?;
-
-    Ok(())
-}
 
 fn exec_open(text_view: &TextView) -> Result<(), Error> {
     let buffer = text_view
@@ -135,9 +36,9 @@ fn exec_open(text_view: &TextView) -> Result<(), Error> {
 
     debug!("Launching: {}", line);
     if line.trim().ends_with(".desktop") {
-        launch_application(&Path::new(&line.trim())).is_ok();
+        apps::launch_application(&Path::new(&line.trim())).is_ok();
     } else {
-        open_file_in_default_app(&Path::new(&line.trim())).is_ok();
+        files::open_file_in_default_app(&Path::new(&line.trim())).is_ok();
     }
 
     gtk::main_quit();
@@ -150,8 +51,8 @@ fn main() -> Result<(), Error> {
 
     gtk::init().with_context(|_| err_msg("failed to initialise gtk"))?;
 
-    let full_files_list = get_home_files()?;
-    let full_apps_list = get_apps()?;
+    let full_files_list = files::get_home_files()?;
+    let full_apps_list = apps::get_apps()?;
 
     // TODO: Add file launching back in.
     let haystack = full_apps_list + &full_files_list;
