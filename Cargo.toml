@@ -25,3 +25,10 @@ simple_logger = "1.0.1"
 [dependencies.gtk]
 version = "0.6.0"
 features = ["v3_22"]
+
+[dev-dependencies]
+criterion = "0.2"
+
+[[bench]]
+name = "benchmarks"
+harness = false
