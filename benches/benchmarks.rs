@@ -2,7 +2,8 @@
 extern crate criterion;
 extern crate riiry;
 
-use criterion::Criterion;
+//use criterion::Criterion;
+use criterion::*;
 
 use riiry::apps;
 use riiry::files;
@@ -10,31 +11,32 @@ use riiry::filter;
 
 fn bench_get_apps(c: &mut Criterion) {
     c.bench_function("bench_get_apps()", |b| {
-        b.iter(|| apps::get_apps())
+        b.iter_batched(|| (), |_| apps::get_apps(), BatchSize::NumIterations(1))
     });
 }
 
 fn bench_get_files(c: &mut Criterion) {
     c.bench_function("bench_get_files()", |b| {
-        b.iter(|| files::get_home_files())
+        b.iter_batched(|| (), |_| files::get_home_files(), BatchSize::NumIterations(1))
     });
 }
 
 fn bench_filter_lines_apps(c: &mut Criterion) {
-    c.bench_function("bench_filter_lines_apps()", |b| {
-        b.iter(|| {
-            let apps = apps::get_apps().unwrap();
+    let apps = apps::get_apps().unwrap();
+
+    c.bench_function("bench_filter_lines_apps()", move |b| {
+        b.iter_batched(|| apps.clone(), |apps| {
             filter::filter_lines("firefox", &apps)
-        })
+        }, BatchSize::NumIterations(1))
     });
 }
 
 fn bench_filter_lines_files(c: &mut Criterion) {
-    c.bench_function("bench_filter_lines_files()", |b| {
-        b.iter(|| {
-            let files = files::get_home_files().unwrap();
+    let files = files::get_home_files().unwrap();
+    c.bench_function("bench_filter_lines_files()", move |b| {
+        b.iter_batched(|| files.clone(), |files| {
             filter::filter_lines("firefox", &files)
-        })
+        }, BatchSize::NumIterations(1))
     });
 }
 
