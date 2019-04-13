@@ -55,10 +55,18 @@ fn main() -> Result<(), Error> {
     let full_apps_list = apps::get_apps().unwrap_or_default();
 
     // TODO: Add file launching back in.
-    //let haystack = full_apps_list + &full_files_list;
-    let mut haystack = full_apps_list;
-    haystack.extend(full_files_list);
-    //let haystack = full_apps_list;
+    //let mut haystack = full_apps_list;
+    //haystack.extend(full_files_list);
+    let haystack = full_apps_list;
+    debug!("haystack: {:?}", haystack);
+
+    let haystack_str: Vec<String> = haystack
+        .into_iter()
+        .map(|pathbuf| {
+            //pathbuf.to_str().map_or("", |s| format!("{}\n", s))
+            pathbuf.to_str().unwrap_or_default().to_string()
+        })
+        .collect();
 
     // Popup is not what we want (broken af on i3wm).  Toplevel is a "normal" window, also not what
     // we want.  Maybe needs to be Dialog?
@@ -79,7 +87,7 @@ fn main() -> Result<(), Error> {
     let buffer = text_view
         .get_buffer()
         .ok_or_else(|| err_msg("text view buffer missing"))?;
-    buffer.insert_at_cursor(&haystack);
+    buffer.insert_at_cursor(&haystack_str.join("\n"));
 
     // Pack widgets vertically.
     let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -123,13 +131,14 @@ fn main() -> Result<(), Error> {
         entry.connect_changed(move |e| {
             let buffer = e.get_buffer();
             let query = buffer.get_text();
-            let results = filter::filter_lines(&query, &haystack);
-            debug!("{}", results);
+            let hs = haystack_str.clone();
+            let results = filter::filter_lines(&query, hs);
+            debug!("{:?}", results);
 
             //update the main list
             let buffer = text_view.get_buffer().unwrap();
             buffer.set_text("");
-            buffer.insert_at_cursor(&results);
+            buffer.insert_at_cursor(&results.join("\n"));
         });
     }
 

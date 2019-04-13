@@ -1,29 +1,29 @@
+use log::{debug};
 use sublime_fuzzy::best_match;
 
-pub fn filter_lines<'a>(query: &str, strlines: Vec<&'a str>) -> Vec<&'a str> {
+pub fn filter_lines(query: &str, strlines: Vec<String>) -> Vec<String> {
     if query.is_empty() {
         return strlines;
     }
 
-    //let mut results: Vec<(isize, &str)> = strlines
-    let mut results: Vec<&str> = strlines
+    debug!("filter_lines() query: {}, strlines.len(): {}", query, strlines.len());
+
+    let mut matches: Vec<(isize, String)> = strlines
         .into_iter()
-        .map(|s| match best_match(query, s) {
+        .map(|s| match best_match(query, &s) {
             Some(m) => (m.score(), s),
             None => (0, s),
         })
         .filter(|t| t.0 > 0)
+        .collect();
+    matches.sort_by(|a, b| a.0.cmp(&b.0).reverse());
+
+    let results: Vec<String> = matches
+        .into_iter()
         .map(|t| t.1)
         .collect();
-    results.sort();
-    results.reverse();
 
-    //let sorted_matches: Vec<&str> = results
-        //.into_iter()
-        //.filter(|t| t.0 > 0)
-        //.map(|t| t.1)
-        //.collect();
+    debug!("filter_lines() FINISHED query: {}", query);
 
-    //sorted_matches
     results
 }

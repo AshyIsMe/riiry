@@ -29,13 +29,10 @@ pub fn get_home_files() -> Option<Vec<PathBuf>> {
         Ok(dir) => {
             Some(WalkDir::new(dir)
                 .into_iter()
+		.filter_entry(|e| is_not_hidden(e))
                 .filter_map(|entry| entry.ok())
                 .filter_map(|entry| {
-                    if !is_hidden(&entry) {
-                        Some(entry.path().to_path_buf())
-                    } else {
-                        None
-                    }
+		    Some(entry.path().to_path_buf())
                 })
                 .collect())
         },
@@ -59,4 +56,13 @@ fn is_hidden(entry: &DirEntry) -> bool {
         .to_str()
         .map(|s| s.starts_with("."))
         .unwrap_or(false)
+}
+
+
+fn is_not_hidden(entry: &DirEntry) -> bool {
+    entry
+         .file_name()
+         .to_str()
+         .map(|s| entry.depth() == 0 || !s.starts_with("."))
+         .unwrap_or(false)
 }
