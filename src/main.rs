@@ -51,11 +51,13 @@ fn main() -> Result<(), Error> {
 
     gtk::init().with_context(|_| err_msg("failed to initialise gtk"))?;
 
-    let full_files_list = files::get_home_files()?;
-    let full_apps_list = apps::get_apps()?;
+    let full_files_list = files::get_home_files().unwrap_or_default();
+    let full_apps_list = apps::get_apps().unwrap_or_default();
 
     // TODO: Add file launching back in.
-    let haystack = full_apps_list + &full_files_list;
+    //let haystack = full_apps_list + &full_files_list;
+    let mut haystack = full_apps_list;
+    haystack.extend(full_files_list);
     //let haystack = full_apps_list;
 
     // Popup is not what we want (broken af on i3wm).  Toplevel is a "normal" window, also not what

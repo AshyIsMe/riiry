@@ -3,7 +3,7 @@ use glib::{get_system_data_dirs, get_user_data_dir};
 use log::{debug, info};
 use regex::Regex;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use walkdir::{DirEntry, WalkDir};
 
@@ -12,7 +12,32 @@ lazy_static! {
     static ref RE_ExecCommand: Regex = Regex::new(r"\nExec=(.*)\n").unwrap();
 }
 
-pub fn get_apps() -> Result<String, Error> {
+//pub fn get_apps() -> Result<String, Error> {
+    //let mut dirs = get_system_data_dirs();
+    //match get_user_data_dir() {
+        //Some(ud) => dirs.push(ud),
+        //None => info!("get_user_data_dir() empty"),
+    //}
+    //debug!("dirs: {:?}", dirs);
+
+    //let mut results = String::new();
+    //for dir in dirs {
+        //for entry in WalkDir::new(dir)
+            //.into_iter()
+            //.filter_map(|e| e.ok())
+            //.filter(|e| is_desktop(e) && is_xdg_application(e))
+        //{
+            //debug!("{}", entry.path().display());
+            //results.push_str(entry.path().to_str().unwrap());
+            //results.push_str("\n");
+        //}
+    //}
+
+    //Ok(results)
+//}
+
+//pub fn get_apps() -> Option<Vec<PathBuf>> {
+pub fn get_apps_strings() -> Option<Vec<String>> {
     let mut dirs = get_system_data_dirs();
     match get_user_data_dir() {
         Some(ud) => dirs.push(ud),
@@ -20,20 +45,53 @@ pub fn get_apps() -> Result<String, Error> {
     }
     debug!("dirs: {:?}", dirs);
 
-    let mut results = String::new();
-    for dir in dirs {
-        for entry in WalkDir::new(dir)
+    //let apps: Vec<Option<PathBuf>> = dirs.into_iter()
+    let apps: Vec<Option<String>> = dirs.into_iter()
+        .map(|dir| WalkDir::new(dir)
             .into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| is_desktop(e) && is_xdg_application(e))
-        {
-            debug!("{}", entry.path().display());
-            results.push_str(entry.path().to_str().unwrap());
-            results.push_str("\n");
-        }
-    }
+            .filter_map(|entry| entry.ok())
+            .map(|entry| {
+                if is_desktop(&entry) && is_xdg_application(&entry) {
+                    //Some(entry.path().to_path_buf())
+                    //Some(entry.path().to_path_buf())
+                    let s = String::from(entry.path().to_str().unwrap());
+                    Some(s)
+                } else {
+                    None
+                }
+            })
+            .collect())
+        .collect();
 
-    Ok(results)
+    Some(apps.into_iter().flatten().collect())
+}
+
+pub fn get_apps() -> Option<Vec<PathBuf>> {
+    let mut dirs = get_system_data_dirs();
+    match get_user_data_dir() {
+        Some(ud) => dirs.push(ud),
+        None => info!("get_user_data_dir() empty"),
+    }
+    debug!("dirs: {:?}", dirs);
+
+    let apps: Vec<Option<PathBuf>> = dirs.into_iter()
+        .map(|dir| WalkDir::new(dir)
+            .into_iter()
+            .filter_map(|entry| entry.ok())
+            .map(|entry| {
+                if is_desktop(&entry) && is_xdg_application(&entry) {
+                    //Some(entry.path().to_path_buf())
+                    //Some(entry.path().to_path_buf())
+                    let s = String::from(entry.path().to_str().unwrap());
+                    Some(s)
+                } else {
+                    None
+                }
+            })
+            .collect())
+        .collect();
+
+    Some(apps.into_iter().flatten().collect())
 }
 
 pub fn launch_application(path: &Path) -> Result<(), Error> {
