@@ -20,25 +20,19 @@ pub fn get_apps() -> Option<Vec<PathBuf>> {
     }
     debug!("dirs: {:?}", dirs);
 
-    let apps: Vec<Option<PathBuf>> = dirs.into_iter()
-        .map(|dir| WalkDir::new(dir)
+    let mut apps: Vec<PathBuf> = Vec::new();
+    for dir in dirs {
+        for entry in WalkDir::new(dir)
             .into_iter()
-            .filter_map(|entry| entry.ok())
-            .map(|entry| {
-                if is_desktop(&entry) && is_xdg_application(&entry) {
-                    //Some(entry.path().to_path_buf())
-                    //Some(entry.path().to_path_buf())
-                    let s = String::from(entry.path().to_str().unwrap());
-                    debug!("{}", s);
-                    Some(s)
-                } else {
-                    None
-                }
-            })
-            .collect())
-        .collect();
+            .filter_map(|e| e.ok())
+            .filter(|e| is_desktop(e) && is_xdg_application(e))
+        {
+            debug!("{}", entry.path().display());
+            apps.push(entry.path().to_path_buf());
+        }
+    }
 
-    Some(apps.into_iter().flatten().collect())
+    Some(apps)
 }
 
 pub fn launch_application(path: &Path) -> Result<(), Error> {
