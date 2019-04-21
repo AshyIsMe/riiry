@@ -55,9 +55,9 @@ fn main() -> Result<(), Error> {
     let full_apps_list = apps::get_apps().unwrap_or_default();
 
     // TODO: Add file launching back in.
-    //let mut haystack = full_apps_list;
-    //haystack.extend(full_files_list);
-    let haystack = full_apps_list;
+    let mut haystack = full_apps_list;
+    haystack.extend(full_files_list);
+    //let haystack = full_apps_list;
     debug!("haystack: {:?}", haystack);
 
     let haystack_str: Vec<String> = haystack
@@ -132,7 +132,8 @@ fn main() -> Result<(), Error> {
             let buffer = e.get_buffer();
             let query = buffer.get_text();
             let hs = haystack_str.clone();
-            let results = filter::filter_lines(&query, hs);
+            //let results = filter::filter_lines(&query, hs);
+            let results = filter::filter_lines_rff(&query, hs);
             debug!("{:?}", results);
 
             //update the main list
