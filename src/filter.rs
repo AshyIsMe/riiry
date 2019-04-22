@@ -1,5 +1,7 @@
 use log::{debug};
 use sublime_fuzzy::best_match;
+use rayon::prelude::*;
+
 use rff;
 
 pub fn filter_lines(query: &str, strlines: Vec<String>) -> Vec<String> {
@@ -36,19 +38,15 @@ pub fn filter_lines_rff(query: &str, strlines: Vec<String>) -> Vec<String> {
 
     debug!("filter_lines_rff() query: {}, strlines.len(): {}", query, strlines.len());
 
-    let mut matches: Vec<(f64, String)> = strlines
-        .into_iter()
-        .map(|s| match rff::match_and_score(query, &s) {
-            Some(m) => (m.1, s),
-            None => (0.0, s),
-        })
-        .filter(|t| t.0 > 0.0)
+    let mut matches: Vec<_> = strlines
+        .par_iter()
+        .filter_map(|line| rff::match_and_score(query, &line))
         .collect();
-    matches.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+    matches.par_sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap().reverse());
 
     let results: Vec<String> = matches
-        .into_iter()
-        .map(|t| t.1)
+        .par_iter()
+        .map(|t| String::from(t.0))
         .collect();
 
     debug!("filter_lines_rff() FINISHED query: {}", query);
