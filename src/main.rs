@@ -10,6 +10,7 @@ use gdk::enums::key;
 use gtk::prelude::*;
 use gtk::{Entry, TextView, Window, WindowType};
 use log::{debug};
+use rayon::prelude::*;
 use simple_logger;
 use std::path::Path;
 
@@ -60,7 +61,7 @@ fn main() -> Result<(), Error> {
     debug!("haystack: {:?}", haystack);
 
     let haystack_str: Vec<String> = haystack
-        .into_iter()
+        .par_iter()
         .map(|pathbuf| {
             //pathbuf.to_str().map_or("", |s| format!("{}\n", s))
             pathbuf.to_str().unwrap_or_default().to_string()
@@ -127,13 +128,12 @@ fn main() -> Result<(), Error> {
 
     {
         let text_view = text_view.clone();
+        let hs = haystack_str.clone();
         entry.connect_changed(move |e| {
             let buffer = e.get_buffer();
             let query = buffer.get_text();
-            let hs = haystack_str.clone();
-            //let results = filter::filter_lines(&query, hs);
-            let results = filter::filter_lines_rff(&query, hs);
-            debug!("{:?}", results);
+            let results = filter::filter_lines_rff(&query, &hs);
+            //debug!("{:?}", results);
 
             //update the main list
             let buffer = text_view.get_buffer().unwrap();

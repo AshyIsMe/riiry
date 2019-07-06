@@ -31,9 +31,9 @@ pub fn filter_lines(query: &str, strlines: Vec<String>) -> Vec<String> {
     results
 }
 
-pub fn filter_lines_rff(query: &str, strlines: Vec<String>) -> Vec<String> {
+pub fn filter_lines_rff(query: &str, strlines: &Vec<String>) -> Vec<String> {
     if query.is_empty() {
-        return strlines;
+        return strlines.clone();
     }
 
     debug!("filter_lines_rff() query: {}, strlines.len(): {}", query, strlines.len());
