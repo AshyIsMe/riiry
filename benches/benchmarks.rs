@@ -5,7 +5,7 @@ extern crate riiry;
 use criterion::*;
 use std::path::{PathBuf};
 
-use riiry::apps;
+use riiry::applications;
 use riiry::files;
 use riiry::filter;
 
@@ -21,7 +21,7 @@ fn pathbufs_to_vecstr(pathbufs: Vec<PathBuf>) -> Vec<String> {
 
 fn bench_get_apps(c: &mut Criterion) {
     c.bench_function("bench_get_apps()", |b| {
-        b.iter_batched(|| (), |_| apps::get_apps(), BatchSize::NumIterations(1))
+        b.iter_batched(|| (), |_| applications::get_apps(), BatchSize::NumIterations(1))
     });
 }
 
@@ -32,7 +32,7 @@ fn bench_get_files(c: &mut Criterion) {
 }
 
 fn bench_filter_lines_apps(c: &mut Criterion) {
-    let apps = apps::get_apps().unwrap();
+    let apps = applications::get_apps().unwrap();
     let haystack = pathbufs_to_vecstr(apps);
 
     c.bench_function("bench_filter_lines_apps()", move |b| {
@@ -43,7 +43,7 @@ fn bench_filter_lines_apps(c: &mut Criterion) {
 }
 
 fn bench_filter_lines_apps_rff(c: &mut Criterion) {
-    let apps = apps::get_apps().unwrap();
+    let apps = applications::get_apps().unwrap();
     let haystack = pathbufs_to_vecstr(apps);
 
     c.bench_function("bench_filter_lines_apps_rff()", move |b| {

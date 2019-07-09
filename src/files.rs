@@ -1,7 +1,7 @@
 use failure::Error;
 use failure::ResultExt;
 use failure::err_msg;
-use log::{debug};
+//use log::{debug};
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -49,15 +49,6 @@ pub fn open_file_in_default_app(path: &Path) -> Result<(), Error> {
 
     Ok(())
 }
-
-fn is_hidden(entry: &DirEntry) -> bool {
-    entry
-        .file_name()
-        .to_str()
-        .map(|s| s.starts_with("."))
-        .unwrap_or(false)
-}
-
 
 fn is_not_hidden(entry: &DirEntry) -> bool {
     entry
