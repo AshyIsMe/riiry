@@ -57,6 +57,15 @@ fn exec_open(textview: &TextView) -> Result<(), Error> {
     Ok(())
 }
 
+// AA TODO: Move this into a utils.rs.
+fn pathbufs_to_vecstring(haystack: Vec<std::path::PathBuf>) -> Vec<String> {
+    let haystack_str = haystack
+        .par_iter()
+        .map(|pathbuf| pathbuf.to_str().unwrap_or_default().to_string())
+        .collect();
+    haystack_str
+}
+
 impl App {
     pub fn new() -> App {
         // Initialize GTK before proceeding.
@@ -174,21 +183,21 @@ impl App {
         let riirystate: Arc<RwLock<RiiryState>> = Arc::new(RwLock::new(RiiryState::new()));
 
         let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
-        thread::spawn(move || {
-            let full_files_list = files::get_home_files().unwrap_or_default();
-            let full_apps_list = applications::get_apps().unwrap_or_default();
 
-            let mut haystack = full_apps_list;
-            haystack.extend(full_files_list);
-            debug!("haystack: {:?}", haystack);
-
-            let haystack_str: Vec<String> = haystack
-                .par_iter()
-                .map(|pathbuf| pathbuf.to_str().unwrap_or_default().to_string())
-                .collect();
-
-            tx.send(haystack_str);
-        });
+        {
+            let tx = tx.clone();
+            thread::spawn(move || {
+                let full_apps_list = applications::get_apps().unwrap_or_default();
+                tx.send(pathbufs_to_vecstring(full_apps_list));
+            });
+        }
+        {
+            let tx = tx.clone();
+            thread::spawn(move || {
+                let full_files_list = files::get_home_files().unwrap_or_default();
+                tx.send(pathbufs_to_vecstring(full_files_list));
+            });
+        }
 
         {
             let buffer = self
@@ -253,11 +262,13 @@ impl App {
 
             {
                 let textview = textview.clone();
-                rx.attach(None, move |results| {
+                rx.attach(None, move |mut results| {
                     //update the main list
+                    let topn: Vec<String> = results.drain(0..100).collect();
                     let buffer = textview.get_buffer().unwrap();
                     buffer.set_text("");
-                    buffer.insert_at_cursor(&results.join("\n"));
+                    // buffer.insert_at_cursor(&results.join("\n"));
+                    buffer.insert_at_cursor(&topn.join("\n"));
 
                     glib::Continue(true)
                 });
