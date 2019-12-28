@@ -14,6 +14,8 @@ pub mod filter;
 //
 // TODO:
 // - A real data structure in state.rs
+// - Load applications and files lists async
+// - Search the buffer async
 // - better xdg support: https://crates.io/crates/xdg
 // - Windows + OSX: https://crates.io/crates/directories
 

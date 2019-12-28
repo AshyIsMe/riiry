@@ -1,21 +1,27 @@
-use failure::Error;
+extern crate glib;
+
 use failure::err_msg;
+use failure::Error;
 use gdk::enums::key;
 use gtk::prelude::*;
 use gtk::{Entry, TextView, Window, WindowType};
-use log::{debug};
+use log::debug;
 use rayon::prelude::*;
 use std::path::Path;
 use std::process;
+use std::sync::{Arc, RwLock};
+use std::thread;
 
 use super::super::applications;
 use super::super::files;
 use super::super::filter;
 
+use super::super::state::RiiryState;
+
 pub struct App {
     pub window: Window,
     pub entry: Entry,
-    pub textview: TextView
+    pub textview: TextView,
 }
 
 /// A wrapped `App` which provides the capability to execute the program.
@@ -71,7 +77,8 @@ impl App {
         let textview = TextView::new();
         textview.set_cursor_visible(false);
         textview.set_editable(false);
-        let scrolled_textview = gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
+        let scrolled_textview =
+            gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
         scrolled_textview.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
         scrolled_textview.add(&textview);
 
@@ -94,11 +101,15 @@ impl App {
             Inhibit(false)
         });
 
-        App { window, entry, textview }
+        App {
+            window,
+            entry,
+            textview,
+        }
     }
 
-    pub fn connect_events(self) -> ConnectedApp {
-
+    // pub fn connect_events(self) -> ConnectedApp {
+    pub fn connect_events_singlethreaded(self) -> ConnectedApp {
         let full_files_list = files::get_home_files().unwrap_or_default();
         let full_apps_list = applications::get_apps().unwrap_or_default();
 
@@ -115,9 +126,11 @@ impl App {
             })
             .collect();
 
-        let buffer = self.textview
+        let buffer = self
+            .textview
             .get_buffer()
-            .ok_or_else(|| err_msg("text view buffer missing")).unwrap();
+            .ok_or_else(|| err_msg("text view buffer missing"))
+            .unwrap();
         buffer.insert_at_cursor(&haystack_str.join("\n"));
 
         {
@@ -156,4 +169,99 @@ impl App {
         ConnectedApp(self)
     }
 
+    // pub fn connect_events_threaded_broken(self) -> ConnectedApp {
+    pub fn connect_events(self) -> ConnectedApp {
+        let riirystate: Arc<RwLock<RiiryState>> = Arc::new(RwLock::new(RiiryState::new()));
+
+        let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
+        thread::spawn(move || {
+            let full_files_list = files::get_home_files().unwrap_or_default();
+            let full_apps_list = applications::get_apps().unwrap_or_default();
+
+            let mut haystack = full_apps_list;
+            haystack.extend(full_files_list);
+            debug!("haystack: {:?}", haystack);
+
+            let haystack_str: Vec<String> = haystack
+                .par_iter()
+                .map(|pathbuf| pathbuf.to_str().unwrap_or_default().to_string())
+                .collect();
+
+            tx.send(haystack_str);
+        });
+
+        {
+            let buffer = self
+                .textview
+                .get_buffer()
+                .ok_or_else(|| err_msg("text view buffer missing"))
+                .unwrap();
+
+            let riirystate = riirystate.clone();
+
+            rx.attach(None, move |haystack_str| {
+                buffer.insert_at_cursor(&haystack_str.join("\n"));
+
+                riirystate.write().unwrap().extend_haystack(haystack_str);
+
+                glib::Continue(true)
+            });
+        }
+
+        {
+            self.activate();
+            self.key_events(riirystate);
+        }
+
+        ConnectedApp(self)
+    }
+
+    fn activate(&self) {
+        let textview = self.textview.clone();
+        let window = self.window.clone();
+        self.entry.connect_activate(move |_| {
+            if let Err(e) = exec_open(&textview) {
+                gtk::MessageDialog::new(
+                    Some(&window),
+                    gtk::DialogFlags::empty(),
+                    gtk::MessageType::Error,
+                    gtk::ButtonsType::Close,
+                    &format!("oh no! {:?}", e),
+                )
+                .run();
+            }
+        });
+    }
+
+    fn key_events(&self, riirystate: Arc<RwLock<RiiryState>>) {
+        let textview = self.textview.clone();
+        self.entry.connect_changed(move |e| {
+            let buffer = e.get_buffer();
+            let query = buffer.get_text();
+
+            riirystate.write().unwrap().set_needle(query.clone());
+
+            let vec = riirystate.read().unwrap().get_haystack().clone();
+
+            let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
+            thread::spawn(move || {
+                let results = filter::filter_lines_rff(&query, &vec);
+                //debug!("{:?}", results);
+
+                tx.send(results);
+            });
+
+            {
+                let textview = textview.clone();
+                rx.attach(None, move |results| {
+                    //update the main list
+                    let buffer = textview.get_buffer().unwrap();
+                    buffer.set_text("");
+                    buffer.insert_at_cursor(&results.join("\n"));
+
+                    glib::Continue(true)
+                });
+            }
+        });
+    }
 }
