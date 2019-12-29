@@ -117,68 +117,6 @@ impl App {
         }
     }
 
-    // pub fn connect_events(self) -> ConnectedApp {
-    pub fn connect_events_singlethreaded(self) -> ConnectedApp {
-        let full_files_list = files::get_home_files().unwrap_or_default();
-        let full_apps_list = applications::get_apps().unwrap_or_default();
-
-        let mut haystack = full_apps_list;
-        haystack.extend(full_files_list);
-        //let haystack = full_apps_list;
-        debug!("haystack: {:?}", haystack);
-
-        let haystack_str: Vec<String> = haystack
-            .par_iter()
-            .map(|pathbuf| {
-                //pathbuf.to_str().map_or("", |s| format!("{}\n", s))
-                pathbuf.to_str().unwrap_or_default().to_string()
-            })
-            .collect();
-
-        let buffer = self
-            .textview
-            .get_buffer()
-            .ok_or_else(|| err_msg("text view buffer missing"))
-            .unwrap();
-        buffer.insert_at_cursor(&haystack_str.join("\n"));
-
-        {
-            let textview = self.textview.clone();
-            let window = self.window.clone();
-            self.entry.connect_activate(move |_| {
-                if let Err(e) = exec_open(&textview) {
-                    gtk::MessageDialog::new(
-                        Some(&window),
-                        gtk::DialogFlags::empty(),
-                        gtk::MessageType::Error,
-                        gtk::ButtonsType::Close,
-                        &format!("oh no! {:?}", e),
-                    )
-                    .run();
-                }
-            });
-        }
-
-        {
-            let textview = self.textview.clone();
-            let hs = haystack_str.clone();
-            self.entry.connect_changed(move |e| {
-                let buffer = e.get_buffer();
-                let query = buffer.get_text();
-                let results = filter::filter_lines_rff(&query, &hs);
-                //debug!("{:?}", results);
-
-                //update the main list
-                let buffer = textview.get_buffer().unwrap();
-                buffer.set_text("");
-                buffer.insert_at_cursor(&results.join("\n"));
-            });
-        }
-
-        ConnectedApp(self)
-    }
-
-    // pub fn connect_events_threaded_broken(self) -> ConnectedApp {
     pub fn connect_events(self) -> ConnectedApp {
         let riirystate: Arc<RwLock<RiiryState>> = Arc::new(RwLock::new(RiiryState::new()));
 
@@ -244,6 +182,8 @@ impl App {
 
     fn key_events(&self, riirystate: Arc<RwLock<RiiryState>>) {
         let textview = self.textview.clone();
+
+        //AA TODO: Kill any running threads before starting new search thread
         self.entry.connect_changed(move |e| {
             let buffer = e.get_buffer();
             let query = buffer.get_text();
