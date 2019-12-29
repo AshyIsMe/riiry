@@ -1,6 +1,6 @@
-use log::{debug};
-use sublime_fuzzy::best_match;
+use log::debug;
 use rayon::prelude::*;
+use sublime_fuzzy::best_match;
 
 use rff;
 
@@ -9,7 +9,11 @@ pub fn filter_lines(query: &str, strlines: Vec<String>) -> Vec<String> {
         return strlines;
     }
 
-    debug!("filter_lines() query: {}, strlines.len(): {}", query, strlines.len());
+    debug!(
+        "filter_lines() query: {}, strlines.len(): {}",
+        query,
+        strlines.len()
+    );
 
     let mut matches: Vec<(isize, String)> = strlines
         .into_iter()
@@ -21,10 +25,7 @@ pub fn filter_lines(query: &str, strlines: Vec<String>) -> Vec<String> {
         .collect();
     matches.sort_by(|a, b| a.0.cmp(&b.0).reverse());
 
-    let results: Vec<String> = matches
-        .into_iter()
-        .map(|t| t.1)
-        .collect();
+    let results: Vec<String> = matches.into_iter().map(|t| t.1).collect();
 
     debug!("filter_lines() FINISHED query: {}", query);
 
@@ -36,7 +37,11 @@ pub fn filter_lines_rff(query: &str, strlines: &Vec<String>) -> Vec<String> {
         return strlines.clone();
     }
 
-    debug!("filter_lines_rff() query: {}, strlines.len(): {}", query, strlines.len());
+    debug!(
+        "filter_lines_rff() query: {}, strlines.len(): {}",
+        query,
+        strlines.len()
+    );
 
     let mut matches: Vec<_> = strlines
         .par_iter()
@@ -44,10 +49,7 @@ pub fn filter_lines_rff(query: &str, strlines: &Vec<String>) -> Vec<String> {
         .collect();
     matches.par_sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap().reverse());
 
-    let results: Vec<String> = matches
-        .par_iter()
-        .map(|t| String::from(t.0))
-        .collect();
+    let results: Vec<String> = matches.par_iter().map(|t| String::from(t.0)).collect();
 
     debug!("filter_lines_rff() FINISHED query: {}", query);
 
