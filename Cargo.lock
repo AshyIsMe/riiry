@@ -705,7 +705,7 @@ dependencies = [
 
 [[package]]
 name = "riiry"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "criterion 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
