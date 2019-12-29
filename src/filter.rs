@@ -4,6 +4,8 @@ use sublime_fuzzy::best_match;
 
 use rff;
 
+use super::worker::Cancel;
+
 pub fn filter_lines(query: &str, strlines: Vec<String>) -> Vec<String> {
     if query.is_empty() {
         return strlines;
@@ -32,9 +34,14 @@ pub fn filter_lines(query: &str, strlines: Vec<String>) -> Vec<String> {
     results
 }
 
-pub fn filter_lines_rff(query: &str, strlines: &Vec<String>) -> Vec<String> {
+/// Returns `None` if aborted.
+pub fn filter_lines_rff(
+    query: &str,
+    strlines: &Vec<String>,
+    cancel: &Cancel,
+) -> Option<Vec<String>> {
     if query.is_empty() {
-        return strlines.clone();
+        return Some(strlines.clone());
     }
 
     debug!(
@@ -45,13 +52,23 @@ pub fn filter_lines_rff(query: &str, strlines: &Vec<String>) -> Vec<String> {
 
     let mut matches: Vec<_> = strlines
         .par_iter()
-        .filter_map(|line| rff::match_and_score(query, &line))
+        .filter_map(|line| {
+            if cancel.check_done() {
+                return None;
+            }
+            rff::match_and_score(query, &line)
+        })
         .collect();
-    matches.par_sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap().reverse());
 
-    let results: Vec<String> = matches.par_iter().map(|t| String::from(t.0)).collect();
+    if cancel.check_done() {
+        return None;
+    }
+
+    matches.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap().reverse());
+
+    let results: Vec<String> = matches.into_iter().map(|t| String::from(t.0)).collect();
 
     debug!("filter_lines_rff() FINISHED query: {}", query);
 
-    results
+    Some(results)
 }

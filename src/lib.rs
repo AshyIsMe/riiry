@@ -8,3 +8,5 @@ extern crate regex;
 pub mod applications;
 pub mod files;
 pub mod filter;
+
+pub mod worker;

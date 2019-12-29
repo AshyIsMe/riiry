@@ -1,6 +1,9 @@
+use super::worker::Worker;
+
 pub struct RiiryState {
     haystack: Vec<String>,
     needle: String,
+    pub search_worker: Worker,
 }
 
 impl RiiryState {
@@ -8,6 +11,7 @@ impl RiiryState {
         RiiryState {
             haystack: Vec::new(),
             needle: String::new(),
+            search_worker: Worker::default(),
         }
     }
 

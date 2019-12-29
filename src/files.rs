@@ -3,6 +3,7 @@ use failure::Error;
 use failure::ResultExt;
 use glib::Sender;
 use log::debug;
+use log::trace;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -46,7 +47,7 @@ pub fn get_home_files_incremental(tx: Sender<Vec<String>>) {
             .filter_entry(|e| is_not_hidden(e))
             .filter_map(|e| e.ok())
         {
-            debug!("{}", entry.path().display());
+            trace!("path: {}", entry.path().display());
             // tx.send(vec![String::from(entry.path().to_str().unwrap()) + "\n"]);
             tx.send(vec![String::from(entry.path().to_str().unwrap())]);
         }
