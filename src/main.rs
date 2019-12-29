@@ -10,6 +10,8 @@ pub mod filter;
 pub mod state;
 pub mod ui;
 
+pub mod worker;
+
 // TODO: Finish working through this tutorial:
 // https://mmstick.github.io/gtkrs-tutorials/introduction.html
 //

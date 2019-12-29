@@ -183,12 +183,16 @@ impl App {
             let vec = riirystate.read().unwrap().get_haystack().clone();
 
             let (tx, rx) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
-            thread::spawn(move || {
-                let results = filter::filter_lines_rff(&query, &vec);
-                //debug!("{:?}", results);
+            riirystate
+                .write()
+                .unwrap()
+                .search_worker
+                .run(move |cancel| {
+                    let results = filter::filter_lines_rff(&query, &vec, cancel);
+                    //debug!("{:?}", results);
 
-                tx.send(results);
-            });
+                    tx.send(results);
+                });
 
             {
                 let textview = textview.clone();

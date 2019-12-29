@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use riiry::applications;
 use riiry::files;
 use riiry::filter;
+use riiry::worker::Cancel;
 
 fn pathbufs_to_vecstr(pathbufs: Vec<PathBuf>) -> Vec<String> {
     pathbufs
@@ -59,7 +60,7 @@ fn bench_filter_lines_apps_rff(c: &mut Criterion) {
     c.bench_function("bench_filter_lines_apps_rff()", move |b| {
         b.iter_batched(
             || haystack.clone(),
-            |apps| filter::filter_lines_rff("firefox", &apps),
+            |apps| filter::filter_lines_rff("firefox", &apps, Cancel::Never),
             BatchSize::NumIterations(1),
         )
     });
