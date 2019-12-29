@@ -9,8 +9,8 @@ use std::process::Command;
 use walkdir::{DirEntry, WalkDir};
 
 lazy_static! {
-    static ref RE_TypeApplication: Regex = Regex::new(r"\nType=.*Application.*\n").unwrap();
-    static ref RE_ExecCommand: Regex = Regex::new(r"\nExec=(.*)\n").unwrap();
+    static ref RE_TYPEAPPLICATION: Regex = Regex::new(r"\nType=.*Application.*\n").unwrap();
+    static ref RE_EXECCOMMAND: Regex = Regex::new(r"\nExec=(.*)\n").unwrap();
 }
 
 pub fn get_apps() -> Option<Vec<PathBuf>> {
@@ -58,7 +58,7 @@ pub fn get_apps_incremental(tx: Sender<Vec<String>>) {
 }
 pub fn launch_application(path: &Path) -> Result<(), Error> {
     let f = fs::read_to_string(path).unwrap();
-    let cap = RE_ExecCommand.captures(&f).unwrap();
+    let cap = RE_EXECCOMMAND.captures(&f).unwrap();
     let line = &cap[1];
 
     // WARNING: Here be demons!
@@ -86,6 +86,6 @@ fn is_xdg_application(entry: &DirEntry) -> bool {
     let f = fs::read_to_string(entry.path());
     match f {
         Err(_) => false,
-        Ok(f) => RE_TypeApplication.is_match(&f),
+        Ok(f) => RE_TYPEAPPLICATION.is_match(&f),
     }
 }
