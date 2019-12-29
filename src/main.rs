@@ -1,13 +1,14 @@
 #[macro_use]
-
 extern crate lazy_static;
+extern crate log;
 extern crate regex;
+extern crate simple_logger;
 
-pub mod ui;
 pub mod applications;
 pub mod files;
-pub mod state;
 pub mod filter;
+pub mod state;
+pub mod ui;
 
 // TODO: Finish working through this tutorial:
 // https://mmstick.github.io/gtkrs-tutorials/introduction.html
@@ -19,8 +20,9 @@ pub mod filter;
 // - better xdg support: https://crates.io/crates/xdg
 // - Windows + OSX: https://crates.io/crates/directories
 
-
 fn main() {
+    simple_logger::init().unwrap();
+
     // Initialize the UI's initial state
     ui::App::new()
         // Connect events to the UI
