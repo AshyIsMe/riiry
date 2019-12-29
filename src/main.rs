@@ -1,8 +1,5 @@
 #[macro_use]
 extern crate lazy_static;
-extern crate log;
-extern crate regex;
-extern crate simple_logger;
 
 pub mod applications;
 pub mod files;
@@ -22,7 +19,7 @@ pub mod worker;
 // - Windows + OSX: https://crates.io/crates/directories
 
 fn main() {
-    simple_logger::init().unwrap();
+    pretty_env_logger::init();
     // simple_logger::init_with_level(log::Level::Warn).unwrap();
 
     // Initialize the UI's initial state

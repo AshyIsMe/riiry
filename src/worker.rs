@@ -5,6 +5,8 @@ use std::sync::Mutex;
 use std::thread;
 use std::thread::JoinHandle;
 
+use log::info;
+
 #[derive(Default)]
 pub struct Worker {
     cancellation: Option<mpsc::Sender<()>>,
@@ -17,6 +19,7 @@ impl Worker {
         T: 'static + Send,
     {
         if let Some(cancellation) = self.cancellation.as_mut() {
+            info!("asking existing worker to cancel");
             let _ = cancellation.send(());
         }
         let (cancellation, done) = mpsc::channel();
