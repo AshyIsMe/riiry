@@ -188,10 +188,12 @@ impl App {
                 .unwrap()
                 .search_worker
                 .run(move |cancel| {
-                    let results = filter::filter_lines_rff(&query, &vec, cancel);
+                    let results = filter::filter_lines_rff(&query, &vec, &cancel);
                     //debug!("{:?}", results);
 
-                    tx.send(results);
+                    if let Some(results) = results {
+                        let _ = tx.send(results);
+                    }
                 });
 
             {

@@ -60,7 +60,7 @@ fn bench_filter_lines_apps_rff(c: &mut Criterion) {
     c.bench_function("bench_filter_lines_apps_rff()", move |b| {
         b.iter_batched(
             || haystack.clone(),
-            |apps| filter::filter_lines_rff("firefox", &apps, Cancel::Never),
+            |apps| filter::filter_lines_rff("firefox", &apps, &Cancel::Never),
             BatchSize::NumIterations(1),
         )
     });
