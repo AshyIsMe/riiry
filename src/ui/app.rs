@@ -125,15 +125,19 @@ impl App {
         {
             let tx = tx.clone();
             thread::spawn(move || {
-                let full_apps_list = applications::get_apps().unwrap_or_default();
-                tx.send(pathbufs_to_vecstring(full_apps_list));
+                // let full_apps_list = applications::get_apps().unwrap_or_default();
+                // tx.send(pathbufs_to_vecstring(full_apps_list));
+
+                applications::get_apps_incremental(tx);
             });
         }
         {
             let tx = tx.clone();
             thread::spawn(move || {
-                let full_files_list = files::get_home_files().unwrap_or_default();
-                tx.send(pathbufs_to_vecstring(full_files_list));
+                // let full_files_list = files::get_home_files().unwrap_or_default();
+                // tx.send(pathbufs_to_vecstring(full_files_list));
+
+                files::get_home_files_incremental(tx);
             });
         }
 
@@ -146,7 +150,8 @@ impl App {
 
             let riirystate = riirystate.clone();
 
-            rx.attach(None, move |haystack_str| {
+            rx.attach(None, move |mut haystack_str| {
+                haystack_str[0].push_str("\n");
                 buffer.insert_at_cursor(&haystack_str.join("\n"));
 
                 riirystate.write().unwrap().extend_haystack(haystack_str);
@@ -204,7 +209,8 @@ impl App {
                 let textview = textview.clone();
                 rx.attach(None, move |mut results| {
                     //update the main list
-                    let topn: Vec<String> = results.drain(0..100).collect();
+                    // let topn: Vec<String> = results.drain(0..100).collect(); //AA TODO - drain errors out if length is shorter than range
+                    let topn: Vec<String> = results;
                     let buffer = textview.get_buffer().unwrap();
                     buffer.set_text("");
                     // buffer.insert_at_cursor(&results.join("\n"));

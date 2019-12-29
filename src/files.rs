@@ -1,42 +1,55 @@
+//use log::{debug};
+use failure::err_msg;
 use failure::Error;
 use failure::ResultExt;
-use failure::err_msg;
-//use log::{debug};
+use glib::Sender;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use walkdir::{DirEntry, WalkDir};
 
 //pub fn get_home_files() -> Result<String, Error> {
-    //let mut results = String::new();
-    //let dir = env::var("HOME")?;
-    //for entry in WalkDir::new(dir)
-        //.into_iter()
-        //.filter_entry(|e| !is_hidden(e))
-    //{
-        //if let Ok(e) = entry {
-            //debug!("{}", e.path().display());
-            //results.push_str(e.path().to_str().unwrap());
-            //results.push_str("\n");
-        //}
-    //}
+//let mut results = String::new();
+//let dir = env::var("HOME")?;
+//for entry in WalkDir::new(dir)
+//.into_iter()
+//.filter_entry(|e| !is_hidden(e))
+//{
+//if let Ok(e) = entry {
+//debug!("{}", e.path().display());
+//results.push_str(e.path().to_str().unwrap());
+//results.push_str("\n");
+//}
+//}
 
-    //Ok(results)
+//Ok(results)
 //}
 
 pub fn get_home_files() -> Option<Vec<PathBuf>> {
     match env::var("HOME") {
-        Ok(dir) => {
-            Some(WalkDir::new(dir)
+        Ok(dir) => Some(
+            WalkDir::new(dir)
                 .into_iter()
-		.filter_entry(|e| is_not_hidden(e))
+                .filter_entry(|e| is_not_hidden(e))
                 .filter_map(|entry| entry.ok())
-                .filter_map(|entry| {
-		    Some(entry.path().to_path_buf())
-                })
-                .collect())
-        },
-        _ => None
+                .filter_map(|entry| Some(entry.path().to_path_buf()))
+                .collect(),
+        ),
+        _ => None,
+    }
+}
+
+pub fn get_home_files_incremental(tx: Sender<Vec<String>>) {
+    if let Ok(dir) = env::var("HOME") {
+        for entry in WalkDir::new(dir)
+            .into_iter()
+            .filter_entry(|e| is_not_hidden(e))
+            .filter_map(|e| e.ok())
+        {
+            println!("{}", entry.path().display());
+            // tx.send(vec![String::from(entry.path().to_str().unwrap()) + "\n"]);
+            tx.send(vec![String::from(entry.path().to_str().unwrap())]);
+        }
     }
 }
 
@@ -52,8 +65,8 @@ pub fn open_file_in_default_app(path: &Path) -> Result<(), Error> {
 
 fn is_not_hidden(entry: &DirEntry) -> bool {
     entry
-         .file_name()
-         .to_str()
-         .map(|s| entry.depth() == 0 || !s.starts_with("."))
-         .unwrap_or(false)
+        .file_name()
+        .to_str()
+        .map(|s| entry.depth() == 0 || !s.starts_with("."))
+        .unwrap_or(false)
 }

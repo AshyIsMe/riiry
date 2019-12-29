@@ -1,4 +1,5 @@
 use failure::Error;
+use glib::Sender;
 use glib::{get_system_data_dirs, get_user_data_dir};
 use log::{debug, info};
 use regex::Regex;
@@ -35,6 +36,26 @@ pub fn get_apps() -> Option<Vec<PathBuf>> {
     Some(apps)
 }
 
+pub fn get_apps_incremental(tx: Sender<Vec<String>>) {
+    let mut dirs = get_system_data_dirs();
+    match get_user_data_dir() {
+        Some(ud) => dirs.push(ud),
+        None => info!("get_user_data_dir() empty"),
+    }
+    debug!("dirs: {:?}", dirs);
+
+    for dir in dirs {
+        for entry in WalkDir::new(dir)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| is_desktop(e) && is_xdg_application(e))
+        {
+            debug!("{}", entry.path().display());
+            // apps.push(entry.path().to_path_buf());
+            tx.send(vec![String::from(entry.path().to_str().unwrap())]);
+        }
+    }
+}
 pub fn launch_application(path: &Path) -> Result<(), Error> {
     let f = fs::read_to_string(path).unwrap();
     let cap = RE_ExecCommand.captures(&f).unwrap();
