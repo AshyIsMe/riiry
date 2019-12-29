@@ -12,6 +12,7 @@ pkgs.mkShell {
     cargo
     rustc
     rustfmt
+    rustup
     pkgconfig
   ];
 }
