@@ -15,13 +15,13 @@ pub mod ui;
 //
 // TODO:
 // - A real data structure in state.rs
-// - Load applications and files lists async
 // - Search the buffer async
 // - better xdg support: https://crates.io/crates/xdg
 // - Windows + OSX: https://crates.io/crates/directories
 
 fn main() {
     simple_logger::init().unwrap();
+    // simple_logger::init_with_level(log::Level::Warn).unwrap();
 
     // Initialize the UI's initial state
     ui::App::new()
