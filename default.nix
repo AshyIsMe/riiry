@@ -9,6 +9,7 @@ pkgs.mkShell {
     glib
     gnome2.pango
 
+    gnome3.glade
     cargo
     rustc
     rustfmt
