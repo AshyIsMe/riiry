@@ -40,8 +40,10 @@ pub fn open_file_in_default_app(path: &Path) -> Result<(), Error> {
     println!("Launching: xdg-open {:?}", path);
     Command::new("xdg-open")
         .arg(&path.as_os_str())
-        .output()
-        .with_context(|_| err_msg("Failed to run xdg-open"))?;
+        //.output()
+        //.with_context(|_| err_msg("Failed to run xdg-open"))?;
+        .spawn()
+        .expect("Failed to run xdg-open");
 
     Ok(())
 }
