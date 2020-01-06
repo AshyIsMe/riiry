@@ -4,7 +4,9 @@ use failure::err_msg;
 use failure::Error;
 use gdk::enums::key;
 use gtk::prelude::*;
-use gtk::{Entry, TextView, Window, WindowType};
+use gtk::{Builder, Dialog};
+use gtk::{Entry, TextView};
+
 use log::debug;
 use rayon::prelude::*;
 use std::path::Path;
@@ -19,7 +21,7 @@ use super::super::filter;
 use super::super::state::RiiryState;
 
 pub struct App {
-    pub window: Window,
+    pub window: Dialog,
     pub entry: Entry,
     pub textview: TextView,
 }
@@ -65,28 +67,17 @@ impl App {
             process::exit(1);
         }
 
-        // Popup is not what we want (broken af on i3wm).  Toplevel is a "normal" window, also not what
-        // we want.  Maybe needs to be Dialog?
-        //let window = Window::new(WindowType::Popup);
-        let window = Window::new(WindowType::Toplevel);
-        window.set_title("riiry launcher");
-        window.set_default_size(350, 70);
-
-        let entry = Entry::new();
-
-        let textview = TextView::new();
-        textview.set_cursor_visible(false);
-        textview.set_editable(false);
-        let scrolled_textview =
-            gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
-        scrolled_textview.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
-        scrolled_textview.add(&textview);
-
-        // Pack widgets vertically.
-        let vbox = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        vbox.pack_start(&entry, false, false, 0);
-        vbox.pack_start(&scrolled_textview, true, true, 0);
-        window.add(&vbox);
+        let glade_src = include_str!("riiry.glade");
+        let builder = Builder::new_from_string(glade_src);
+        let window: Dialog = builder
+            .get_object("riiry_dialog")
+            .expect("Couldn't get entry");
+        let entry: Entry = builder
+            .get_object("riiry_dialog_entry")
+            .expect("Couldn't get entry");
+        let textview: TextView = builder
+            .get_object("riiry_dialog_textview")
+            .expect("Couldn't get textview");
 
         window.connect_delete_event(|_, _| {
             gtk::main_quit();
@@ -116,13 +107,17 @@ impl App {
         {
             let tx = tx.clone();
             thread::spawn(move || {
+                debug!("before applications::get_apps_incremental(tx)");
                 applications::get_apps_incremental(tx);
+                debug!("after applications::get_apps_incremental(tx)");
             });
         }
         {
             let tx = tx.clone();
             thread::spawn(move || {
+                debug!("before files::get_home_files_incremental(tx)");
                 files::get_home_files_incremental(tx);
+                debug!("after files::get_home_files_incremental(tx)");
             });
         }
 
@@ -135,9 +130,16 @@ impl App {
 
             let riirystate = riirystate.clone();
 
-            rx.attach(None, move |mut haystack_str| {
+            rx.attach(None, move |mut haystack_str: Vec<String>| {
                 haystack_str[0].push_str("\n");
-                buffer.insert_at_cursor(&haystack_str.join("\n"));
+                // buffer.insert_at_cursor(&haystack_str.join("\n"));
+
+                if haystack_str.len() > 1000 {
+                    let topn: Vec<String> = haystack_str.drain(0..1000).collect();
+                    buffer.insert_at_cursor(&topn.join("\n"));
+                } else {
+                    buffer.insert_at_cursor(&haystack_str.join("\n"));
+                }
 
                 riirystate.write().unwrap().extend_haystack(haystack_str);
 
@@ -146,7 +148,9 @@ impl App {
         }
 
         {
+            debug!("before activate");
             self.activate();
+            debug!("after activate");
             self.key_events(riirystate);
         }
 
@@ -173,7 +177,6 @@ impl App {
     fn key_events(&self, riirystate: Arc<RwLock<RiiryState>>) {
         let textview = self.textview.clone();
 
-        //AA TODO: Kill any running threads before starting new search thread
         self.entry.connect_changed(move |e| {
             let buffer = e.get_buffer();
             let query = buffer.get_text();
@@ -198,14 +201,16 @@ impl App {
 
             {
                 let textview = textview.clone();
-                rx.attach(None, move |results| {
+                rx.attach(None, move |mut results| {
                     //update the main list
-                    // let topn: Vec<String> = results.drain(0..100).collect(); //AA TODO - drain errors out if length is shorter than range
-                    let topn: Vec<String> = results;
                     let buffer = textview.get_buffer().unwrap();
                     buffer.set_text("");
-                    // buffer.insert_at_cursor(&results.join("\n"));
-                    buffer.insert_at_cursor(&topn.join("\n"));
+                    if results.len() > 1000 {
+                        let topn: Vec<String> = results.drain(0..1000).collect(); //AA TODO: there must be a one-liner for this that doesn't error when len too short
+                        buffer.insert_at_cursor(&topn.join("\n"));
+                    } else {
+                        buffer.insert_at_cursor(&results.join("\n"));
+                    }
 
                     glib::Continue(true)
                 });
