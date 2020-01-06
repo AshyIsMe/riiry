@@ -107,13 +107,17 @@ impl App {
         {
             let tx = tx.clone();
             thread::spawn(move || {
+                debug!("before applications::get_apps_incremental(tx)");
                 applications::get_apps_incremental(tx);
+                debug!("after applications::get_apps_incremental(tx)");
             });
         }
         {
             let tx = tx.clone();
             thread::spawn(move || {
+                debug!("before files::get_home_files_incremental(tx)");
                 files::get_home_files_incremental(tx);
+                debug!("after files::get_home_files_incremental(tx)");
             });
         }
 
@@ -126,9 +130,16 @@ impl App {
 
             let riirystate = riirystate.clone();
 
-            rx.attach(None, move |mut haystack_str| {
+            rx.attach(None, move |mut haystack_str: Vec<String>| {
                 haystack_str[0].push_str("\n");
-                buffer.insert_at_cursor(&haystack_str.join("\n"));
+                // buffer.insert_at_cursor(&haystack_str.join("\n"));
+
+                if haystack_str.len() > 1000 {
+                    let topn: Vec<String> = haystack_str.drain(0..1000).collect();
+                    buffer.insert_at_cursor(&topn.join("\n"));
+                } else {
+                    buffer.insert_at_cursor(&haystack_str.join("\n"));
+                }
 
                 riirystate.write().unwrap().extend_haystack(haystack_str);
 
@@ -137,7 +148,9 @@ impl App {
         }
 
         {
+            debug!("before activate");
             self.activate();
+            debug!("after activate");
             self.key_events(riirystate);
         }
 
@@ -188,14 +201,16 @@ impl App {
 
             {
                 let textview = textview.clone();
-                rx.attach(None, move |results| {
+                rx.attach(None, move |mut results| {
                     //update the main list
-                    // let topn: Vec<String> = results.drain(0..100).collect(); //AA TODO - drain errors out if length is shorter than range
-                    let topn: Vec<String> = results;
                     let buffer = textview.get_buffer().unwrap();
                     buffer.set_text("");
-                    // buffer.insert_at_cursor(&results.join("\n"));
-                    buffer.insert_at_cursor(&topn.join("\n"));
+                    if results.len() > 1000 {
+                        let topn: Vec<String> = results.drain(0..1000).collect(); //AA TODO: there must be a one-liner for this that doesn't error when len too short
+                        buffer.insert_at_cursor(&topn.join("\n"));
+                    } else {
+                        buffer.insert_at_cursor(&results.join("\n"));
+                    }
 
                     glib::Continue(true)
                 });
